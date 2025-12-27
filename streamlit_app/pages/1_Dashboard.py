@@ -15,6 +15,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.duplicate_filter import DuplicateFilter  # noqa: E402
+from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
 
 st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
 
@@ -30,7 +31,13 @@ def get_db() -> DuplicateFilter:
 
 def main() -> None:
     """Dashboard page."""
-    st.title("📊 Dashboard")
+    load_fontawesome()
+
+    with st.sidebar:
+        st.markdown("---")
+        st.caption("OMRON Garmin Bridge v0.1.0")
+
+    st.markdown(f"# {ICONS['chart']} Dashboard", unsafe_allow_html=True)
     st.markdown("Blood pressure monitoring overview")
 
     db = get_db()
@@ -46,7 +53,7 @@ def main() -> None:
             index=1,
         )
     with col3:
-        if st.button("🔄 Refresh"):
+        if st.button("Refresh", icon=":material/refresh:"):
             st.rerun()
 
     # Get history for selected period
@@ -60,19 +67,20 @@ def main() -> None:
 
     # Summary metrics
     st.markdown("---")
+    st.subheader("Averages")
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         avg_sys = sum(r["systolic"] for r in history) / len(history)
-        st.metric("Avg Systolic", f"{avg_sys:.0f} mmHg")
+        st.metric("Systolic", f"{avg_sys:.0f} mmHg")
 
     with col2:
         avg_dia = sum(r["diastolic"] for r in history) / len(history)
-        st.metric("Avg Diastolic", f"{avg_dia:.0f} mmHg")
+        st.metric("Diastolic", f"{avg_dia:.0f} mmHg")
 
     with col3:
         avg_pulse = sum(r["pulse"] for r in history) / len(history)
-        st.metric("Avg Pulse", f"{avg_pulse:.0f} bpm")
+        st.metric("Pulse", f"{avg_pulse:.0f} bpm")
 
     with col4:
         st.metric("Readings", len(history))
@@ -179,9 +187,10 @@ def main() -> None:
         st.metric("Body Movement (MOV)", mov_count)
 
         if ihb_count > 0:
-            st.warning(
-                f"⚠️ {ihb_count} readings with irregular heartbeat detected. "
-                "Consider consulting a healthcare provider."
+            st.markdown(
+                f"{ICONS['warning']} **{ihb_count} readings with irregular heartbeat detected.** "
+                "Consider consulting a healthcare provider.",
+                unsafe_allow_html=True,
             )
 
 

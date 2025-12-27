@@ -12,18 +12,26 @@ import streamlit as st
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
+
 st.set_page_config(page_title="Sync", page_icon="🔄", layout="wide")
 
 
 def main() -> None:
     """Sync page."""
-    st.title("🔄 Manual Sync")
+    load_fontawesome()
+
+    with st.sidebar:
+        st.markdown("---")
+        st.caption("OMRON Garmin Bridge v0.1.0")
+
+    st.markdown(f"# {ICONS['sync']} Manual Sync", unsafe_allow_html=True)
     st.markdown("Synchronization with OMRON device")
 
     st.markdown("---")
 
     # Device settings
-    col1, col2 = st.columns(2)
+    col1, spacer, col2 = st.columns([1, 0.1, 1])
 
     with col1:
         st.subheader("Device Settings")
@@ -71,10 +79,11 @@ def main() -> None:
 
     # Sync button
     sync_button = st.button(
-        "🚀 Start Sync",
+        "Start Sync",
         type="primary",
         width="stretch",
         disabled=not bt_pressed,
+        icon=":material/sync:",
     )
 
     if not bt_pressed:

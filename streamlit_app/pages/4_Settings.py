@@ -12,12 +12,20 @@ import yaml
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-st.set_page_config(page_title="Settings", page_icon="⚙️", layout="wide")
+from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
+
+st.set_page_config(page_title="Settings", page_icon="⚙", layout="wide")
 
 
 def main() -> None:
     """Settings page."""
-    st.title("⚙️ Settings")
+    load_fontawesome()
+
+    with st.sidebar:
+        st.markdown("---")
+        st.caption("OMRON Garmin Bridge v0.1.0")
+
+    st.markdown(f"# {ICONS['settings']} Settings", unsafe_allow_html=True)
     st.markdown("Configure OMRON Garmin Bridge")
 
     config_path = project_root / "config" / "config.yaml"
@@ -75,6 +83,204 @@ def main() -> None:
             value=omron_config.get("sync_time", True),
         )
 
+    # Bluetooth Pairing section
+    st.markdown("---")
+    st.subheader("Bluetooth Pairing")
+
+    # Initialize session state for scanned devices
+    if "scanned_devices" not in st.session_state:
+        st.session_state.scanned_devices = []
+
+    # Get paired/trusted devices from bluetoothctl
+    def get_paired_devices() -> dict[str, dict[str, bool]]:
+        """Get paired and trusted status from bluetoothctl."""
+        import subprocess  # nosec B404
+
+        result: dict[str, dict[str, bool]] = {}
+        try:
+            # Get paired devices
+            paired_output = subprocess.run(
+                ["bluetoothctl", "devices", "Paired"],  # nosec B603 B607
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            for line in paired_output.stdout.strip().split("\n"):
+                if line.startswith("Device "):
+                    parts = line.split(" ", 2)
+                    if len(parts) >= 2:
+                        mac = parts[1]
+                        result[mac] = {"paired": True, "trusted": False}
+
+            # Check trusted status for each paired device
+            for mac in result:
+                info_output = subprocess.run(
+                    ["bluetoothctl", "info", mac],  # nosec B603 B607
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if "Trusted: yes" in info_output.stdout:
+                    result[mac]["trusted"] = True
+        except Exception:  # nosec B110
+            pass
+        return result
+
+    paired_status = get_paired_devices()
+
+    # Show currently paired OMRON devices
+    st.markdown("**Paired devices**")
+    omron_paired = {k: v for k, v in paired_status.items() if k.startswith("00:5F:BF")}
+    if omron_paired:
+        for mac, status in omron_paired.items():
+            paired_icon = ICONS["check"] if status["paired"] else ICONS["xmark"]
+            trusted_icon = ICONS["lock"] if status["trusted"] else ICONS["unlock"]
+            st.markdown(
+                f"`{mac}` - Paired: {paired_icon} Trusted: {trusted_icon}",
+                unsafe_allow_html=True,
+            )
+    else:
+        st.info("No paired OMRON devices found")
+
+    st.markdown("---")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Scan for devices**")
+        if st.button("Scan for OMRON devices", key="scan_btn", icon=":material/search:"):
+            with st.spinner("Scanning for BLE devices (10s)..."):
+                try:
+                    import asyncio
+
+                    from src.omron_ble.client import OmronBLEClient
+
+                    async def do_scan() -> list[dict[str, str]]:
+                        devices = await OmronBLEClient.scan_devices(timeout=10)
+                        omron_devices = [
+                            d
+                            for d in devices
+                            if d.name and ("BLESmart" in d.name or "OMRON" in d.name)
+                        ]
+                        return [
+                            {"name": d.name or "Unknown", "mac": d.address} for d in omron_devices
+                        ]
+
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        found_devices = loop.run_until_complete(do_scan())
+                    finally:
+                        loop.close()
+
+                    st.session_state.scanned_devices = found_devices
+
+                    if found_devices:
+                        st.success(f"Found {len(found_devices)} device(s)")
+                    else:
+                        st.warning("No OMRON devices found. Press BT button on device first.")
+                except Exception as e:
+                    st.error(f"Scan failed: {e}")
+
+        # Show scanned devices
+        if st.session_state.scanned_devices:
+            for idx, dev in enumerate(st.session_state.scanned_devices):
+                status = paired_status.get(dev["mac"], {})
+                is_paired = status.get("paired", False)
+                is_trusted = status.get("trusted", False)
+
+                paired_icon = ICONS["check"] if is_paired else ICONS["xmark"]
+                trusted_icon = ICONS["lock"] if is_trusted else ICONS["unlock"]
+
+                st.markdown(
+                    f"**{dev['name']}**  \n"
+                    f"`{dev['mac']}`  \n"
+                    f"Paired: {paired_icon} | Trusted: {trusted_icon}",
+                    unsafe_allow_html=True,
+                )
+
+                if is_paired and st.button(
+                    "Unpair", key=f"unpair_{idx}", icon=":material/link_off:"
+                ):
+                    import subprocess  # nosec B404
+
+                    try:
+                        subprocess.run(
+                            ["bluetoothctl", "remove", dev["mac"]],  # nosec B603 B607
+                            capture_output=True,
+                            timeout=10,
+                        )
+                        st.success(f"Unpaired {dev['mac']}")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Unpair failed: {e}")
+
+    with col2:
+        st.markdown("**Pair device**")
+
+        # Build options from scanned devices
+        device_options = [""] + [
+            f"{d['mac']} ({d['name']})" for d in st.session_state.scanned_devices
+        ]
+        if mac_address and not any(mac_address in opt for opt in device_options):
+            device_options.append(f"{mac_address} (from config)")
+
+        selected_device = st.selectbox(
+            "Select device to pair",
+            options=device_options,
+            key="pair_select",
+            help="Scan for devices first, or select from config",
+        )
+
+        # Extract MAC from selection
+        pair_mac = selected_device.split(" ")[0] if selected_device else ""
+
+        if st.button("Pair Device", key="pair_btn", disabled=not pair_mac, icon=":material/link:"):
+            st.info(
+                "**Pairing instructions:**\n\n"
+                "1. Hold BT button on OMRON until 'P' appears\n"
+                "2. Wait for pairing to complete"
+            )
+            with st.spinner("Pairing..."):
+                try:
+                    import asyncio
+
+                    from src.omron_ble.client import OmronBLEClient
+
+                    async def do_pair(mac: str, model: str) -> bool:
+                        client = OmronBLEClient(device_model=model, mac_address=mac)
+                        return await client.pair()
+
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        success = loop.run_until_complete(do_pair(pair_mac, device_model))
+                    finally:
+                        loop.close()
+
+                    if success:
+                        st.success(f"Successfully paired with {pair_mac}")
+                        st.rerun()
+                    else:
+                        st.error("Pairing failed. Try again or use CLI.")
+                except Exception as e:
+                    st.error(f"Pairing error: {e}")
+
+    with st.expander("CLI Pairing Commands"):
+        st.code(
+            """# Scan for devices
+pdm run python tools/scan_devices.py
+
+# Pair with device (hold BT button until 'P' appears first!)
+pdm run python tools/pair_device.py --mac 00:5F:BF:91:9B:4B
+
+# If pairing fails, reset Bluetooth cache:
+bluetoothctl remove 00:5F:BF:91:9B:4B
+sudo rm -rf /var/lib/bluetooth/<ADAPTER_MAC>/<OMRON_MAC>
+sudo systemctl restart bluetooth""",
+            language="bash",
+        )
+
     st.markdown("---")
 
     # Garmin settings
@@ -96,9 +302,12 @@ def main() -> None:
     # Check if tokens exist
     tokens_dir = project_root / "data" / "tokens"
     if tokens_dir.exists() and list(tokens_dir.glob("*.json")):
-        st.success("✅ Garmin tokens found")
+        st.success("Garmin tokens found", icon=":material/check_circle:")
     else:
-        st.warning("⚠️ Garmin tokens not found. Run: `pdm run python tools/import_tokens.py`")
+        st.warning(
+            "Garmin tokens not found. Run: `pdm run python tools/import_tokens.py`",
+            icon=":material/warning:",
+        )
 
     st.markdown("---")
 
@@ -146,26 +355,28 @@ def main() -> None:
 
     users_config = config.get("users", [{"name": "User1", "omron_slot": 1, "garmin_email": ""}])
 
-    for i, user in enumerate(users_config[:2]):  # Max 2 users
-        col1, col2, col3 = st.columns(3)
+    for i in range(2):  # Max 2 users (OMRON slots 1 and 2)
+        user = users_config[i] if i < len(users_config) else {}
+        col1, col2 = st.columns(2)
         with col1:
             st.text_input(
-                f"User {i + 1} Name", value=user.get("name", f"User{i + 1}"), key=f"user_{i}_name"
+                f"OMRON User {i + 1} Slot - Name",
+                value=user.get("name", ""),
+                key=f"user_{i}_name",
+                help=f"Name for user in OMRON slot {i + 1}",
             )
         with col2:
-            st.selectbox(
-                "OMRON Slot",
-                options=[1, 2],
-                index=user.get("omron_slot", i + 1) - 1,
-                key=f"user_{i}_slot",
+            st.text_input(
+                "Garmin Email",
+                value=user.get("garmin_email", ""),
+                key=f"user_{i}_email",
+                help=f"Garmin account email for OMRON slot {i + 1}",
             )
-        with col3:
-            st.text_input("Garmin Email", value=user.get("garmin_email", ""), key=f"user_{i}_email")
 
     st.markdown("---")
 
     # Save configuration
-    if st.button("💾 Save Configuration", type="primary", width="stretch"):
+    if st.button("Save Configuration", type="primary", icon=":material/save:", width="stretch"):
         # Build new config
         new_config = {
             "omron": {
@@ -177,8 +388,8 @@ def main() -> None:
             },
             "users": [
                 {
-                    "name": st.session_state.get(f"user_{i}_name", f"User{i + 1}"),
-                    "omron_slot": st.session_state.get(f"user_{i}_slot", i + 1),
+                    "name": st.session_state.get(f"user_{i}_name", ""),
+                    "omron_slot": i + 1,
                     "garmin_email": st.session_state.get(f"user_{i}_email", ""),
                 }
                 for i in range(2)
@@ -216,9 +427,14 @@ def main() -> None:
         st.success("Configuration saved!")
         st.rerun()
 
-    # Show current config
+    # Show current config (read fresh from file)
     with st.expander("View Current Configuration"):
-        st.code(yaml.dump(config, default_flow_style=False), language="yaml")
+        if config_path.exists():
+            with open(config_path) as f:
+                current_config = f.read()
+            st.code(current_config, language="yaml")
+        else:
+            st.warning("No config.yaml file found")
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ Usage:
 from __future__ import annotations
 
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -18,14 +19,22 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.duplicate_filter import DuplicateFilter  # noqa: E402
+from streamlit_app.components.icons import (  # noqa: E402
+    ICONS,
+    get_bp_category_icon,
+    load_fontawesome,
+)
 
 # Page configuration
 st.set_page_config(
     page_title="OMRON Garmin Bridge",
-    page_icon="💓",
+    page_icon="❤",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Load Font Awesome
+load_fontawesome()
 
 # Initialize session state
 if "db" not in st.session_state:
@@ -41,7 +50,7 @@ def get_db() -> DuplicateFilter:
 
 def main() -> None:
     """Main application."""
-    st.title("💓 OMRON Garmin Bridge")
+    st.markdown(f"# {ICONS['heart']} OMRON Garmin Bridge", unsafe_allow_html=True)
     st.markdown("---")
 
     # Sidebar - Status
@@ -90,34 +99,34 @@ def main() -> None:
         last = history[0]
         with col1:
             st.subheader("Last Reading")
+
+            # Format timestamp: "2025-12-27T21:13:00" -> "27 Dec 2025, 21:13"
+            ts = datetime.fromisoformat(last["timestamp"])
+            formatted_date = ts.strftime("%d %b %Y, %H:%M")
+            st.markdown(f"{ICONS['calendar']} **Date:** {formatted_date}", unsafe_allow_html=True)
+
             st.metric("Systolic", f"{last['systolic']} mmHg")
             st.metric("Diastolic", f"{last['diastolic']} mmHg")
             st.metric("Pulse", f"{last['pulse']} bpm")
-            st.caption(f"📅 {last['timestamp'][:16]}")
 
             # Flags
             flags = []
             if last.get("irregular_heartbeat"):
-                flags.append("⚠️ IHB")
+                flags.append(f"{ICONS['warning']} IHB")
             if last.get("body_movement"):
-                flags.append("🏃 MOV")
+                flags.append(f"{ICONS['warning']} MOV")
             if flags:
-                st.warning(" | ".join(flags))
+                st.markdown(
+                    f"<div style='color: #ffc107;'>{' | '.join(flags)}</div>",
+                    unsafe_allow_html=True,
+                )
 
         # Category/Classification
         with col2:
             st.subheader("Classification")
             category = last.get("category", "unknown")
-            category_colors = {
-                "optimal": "🟢",
-                "normal": "🟢",
-                "high_normal": "🟡",
-                "grade1_hypertension": "🟠",
-                "grade2_hypertension": "🔴",
-                "grade3_hypertension": "🔴",
-            }
-            color = category_colors.get(category, "⚪")
-            st.markdown(f"### {color} {category.replace('_', ' ').title()}")
+            cat_icon = get_bp_category_icon(category)
+            st.markdown(f"{cat_icon} {category.replace('_', ' ').title()}", unsafe_allow_html=True)
 
             # Averages
             if stats.get("avg_systolic"):
@@ -129,15 +138,8 @@ def main() -> None:
         # Quick actions
         with col3:
             st.subheader("Quick Actions")
-            if st.button("🔄 Refresh Data", width="stretch"):
+            if st.button("Refresh Data", icon=":material/refresh:", width="stretch"):
                 st.rerun()
-
-            st.markdown("---")
-            st.markdown("**Navigation:**")
-            st.page_link("pages/1_Dashboard.py", label="📊 Dashboard", icon="📊")
-            st.page_link("pages/2_History.py", label="📈 History", icon="📈")
-            st.page_link("pages/3_Sync.py", label="🔄 Sync", icon="🔄")
-            st.page_link("pages/4_Settings.py", label="⚙️ Settings", icon="⚙️")
     else:
         st.info("No readings in database. Run a sync to get started!")
         st.code("pdm run python -m src.main sync", language="bash")
@@ -157,9 +159,13 @@ def main() -> None:
             if r.get("body_movement"):
                 flags.append("MOV")
 
+            # Format timestamp
+            ts = datetime.fromisoformat(r["timestamp"])
+            formatted_time = ts.strftime("%d %b %Y, %H:%M")
+
             display_data.append(
                 {
-                    "Time": r["timestamp"][:16],
+                    "Date": formatted_time,
                     "SYS": r["systolic"],
                     "DIA": r["diastolic"],
                     "Pulse": r["pulse"],
