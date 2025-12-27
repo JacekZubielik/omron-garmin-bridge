@@ -1,0 +1,212 @@
+[project]
+name = "omron-garmin-bridge"
+version = "0.1.0"
+description = "Bridge between OMRON blood pressure monitors (BLE) and Garmin Connect + MQTT"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Jacek", email = "zumbik@protonmail.com" }]
+keywords = ["omron", "garmin", "blood-pressure", "ble", "mqtt", "health"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Health",
+]
+
+dependencies = [
+    "bleak>=0.21.0",
+    "garminconnect>=0.2.36",
+    "paho-mqtt>=2.1.0",
+    "PyYAML>=6.0.0",
+    "streamlit>=1.40.0",
+    "plotly>=5.18.0",
+    "schedule>=1.2.0",
+    "terminaltables>=3.1.0",
+]
+
+[project.scripts]
+omron-bridge = "src.main:main"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+version_files = ["pyproject.toml:version"]
+update_changelog_on_bump = true
+changelog_file = "CHANGELOG.md"
+bump_message = "bump: version $current_version -> $new_version"
+
+# ============================================================================
+# Black - Code Formatter
+# ============================================================================
+[tool.black]
+line-length = 100
+target-version = ['py311', 'py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+    | __pycache__
+)/
+'''
+
+# ============================================================================
+# Ruff - Fast Python Linter
+# ============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by black)
+    "B008",   # do not perform function calls in argument defaults
+    "B905",   # zip without explicit strict parameter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001"]  # Unused function argument in tests (fixtures)
+
+# ============================================================================
+# isort - Import Sorting
+# ============================================================================
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["src", "streamlit_app"]
+skip = [".venv", "build", "dist"]
+
+# ============================================================================
+# MyPy - Static Type Checking
+# ============================================================================
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+ignore_missing_imports = true
+exclude = [
+    "tests/",
+    ".venv/",
+    "build/",
+    "dist/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "bleak.*",
+    "garminconnect.*",
+    "paho.*",
+    "streamlit.*",
+    "plotly.*",
+    "schedule.*",
+    "terminaltables.*",
+]
+ignore_missing_imports = true
+
+# ============================================================================
+# Bandit - Security Linter
+# ============================================================================
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B101"]  # assert_used - OK in tests
+
+# ============================================================================
+# Pytest - Testing
+# ============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+# ============================================================================
+# Coverage - Test Coverage
+# ============================================================================
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", ".venv/*"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.dev-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+]
+dev = [
+    "pre-commit>=3.6.0",
+    "commitizen>=3.13.0",
+]
+
+[tool.pdm.build]
+includes = ["src", "streamlit_app"]
+
+# ============================================================================
+# Commitizen - Conventional Commits + Semantic Versioning
+# ============================================================================
+
+[dependency-groups]
+lint = [
+    "black>=24.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+    "isort>=5.13.0",
+    "bandit>=1.7.0",
+    "types-PyYAML>=6.0.12.20250915",
+]
