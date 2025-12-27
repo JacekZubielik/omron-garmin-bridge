@@ -95,6 +95,14 @@ def main() -> None:
 
             bridge = OmronGarminBridge(config)
 
+            # Initialize Garmin and MQTT connections
+            if sync_garmin:
+                progress_bar.progress(30, text="Connecting to Garmin...")
+                bridge._init_garmin()
+            if sync_mqtt:
+                progress_bar.progress(35, text="Connecting to MQTT...")
+                bridge._init_mqtt()
+
             progress_bar.progress(40, text="Connecting to OMRON...")
 
             # Run async sync
