@@ -118,4 +118,3 @@ docker-compose.override.yaml
 *.bak
 
 docs/
-tests/
