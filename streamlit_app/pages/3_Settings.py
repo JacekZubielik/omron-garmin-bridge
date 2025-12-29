@@ -295,10 +295,42 @@ sudo systemctl restart bluetooth""",
 
     st.markdown("**Account Status**")
 
+    # Helper function to generate tokens
+    def generate_garmin_token(email: str, password: str, tokens_dir: Path) -> tuple[bool, str]:
+        """Generate Garmin OAuth tokens.
+
+        Returns:
+            Tuple of (success, message)
+        """
+        from garminconnect import Garmin, GarminConnectAuthenticationError
+
+        try:
+            # Create user-specific token directory
+            user_folder = email.replace("@", "_at_")
+            user_tokens_dir = tokens_dir / user_folder
+            user_tokens_dir.mkdir(parents=True, exist_ok=True)
+
+            # Login and save tokens
+            garmin = Garmin(email, password)
+            garmin.login()
+            garmin.garth.dump(str(user_tokens_dir))
+
+            # Get display name
+            try:
+                display_name = garmin.display_name
+                return True, f"Token generated for {display_name}"
+            except Exception:
+                return True, f"Token generated for {email}"
+
+        except GarminConnectAuthenticationError as e:
+            return False, f"Authentication failed: {e}"
+        except Exception as e:
+            return False, f"Error: {e}"
+
     if not users_config:
         st.info("Configure users in User Mapping section below first.")
     else:
-        for user in users_config:
+        for idx, user in enumerate(users_config):
             user_name = user.get("name", "Unknown")
             garmin_email = user.get("garmin_email", "")
             omron_slot = user.get("omron_slot", "?")
@@ -312,22 +344,70 @@ sudo systemctl restart bluetooth""",
                 # Check token status
                 token_status = get_token_status(tokens_dir, garmin_email)
 
-                if token_status["valid"]:
-                    display_name = token_status.get("display_name") or garmin_email
-                    st.success(
-                        f"**User {omron_slot} ({user_name}):** {display_name}",
-                        icon=":material/check_circle:",
-                    )
-                elif token_status["exists"]:
-                    st.error(
-                        f"**User {omron_slot} ({user_name}):** Token expired - {garmin_email}",
-                        icon=":material/error:",
-                    )
-                else:
-                    st.warning(
-                        f"**User {omron_slot} ({user_name}):** No token - {garmin_email}",
-                        icon=":material/warning:",
-                    )
+                col_status, col_action = st.columns([4, 1])
+
+                with col_status:
+                    if token_status["valid"]:
+                        display_name = token_status.get("display_name") or garmin_email
+                        st.success(
+                            f"**User {omron_slot} ({user_name}):** {display_name}",
+                            icon=":material/check_circle:",
+                        )
+                    elif token_status["exists"]:
+                        st.error(
+                            f"**User {omron_slot} ({user_name}):** Token expired - {garmin_email}",
+                            icon=":material/error:",
+                        )
+                    else:
+                        st.warning(
+                            f"**User {omron_slot} ({user_name}):** No token - {garmin_email}",
+                            icon=":material/warning:",
+                        )
+
+                with col_action:
+                    # Generate/Refresh token button
+                    button_label = "Refresh" if token_status["exists"] else "Generate"
+                    if st.button(
+                        button_label,
+                        key=f"gen_token_{idx}",
+                        icon=":material/refresh:" if token_status["exists"] else ":material/key:",
+                    ):
+                        st.session_state[f"show_token_form_{idx}"] = True
+
+                # Show token generation form if requested
+                if st.session_state.get(f"show_token_form_{idx}", False):
+                    with st.container():
+                        st.markdown(f"**Generate token for {garmin_email}**")
+                        password = st.text_input(
+                            "Garmin Password",
+                            type="password",
+                            key=f"garmin_pass_{idx}",
+                            help="Your Garmin Connect password (not stored)",
+                        )
+
+                        col_submit, col_cancel = st.columns(2)
+                        with col_submit:
+                            if st.button(
+                                "Login & Generate", key=f"submit_token_{idx}", type="primary"
+                            ):
+                                if password:
+                                    with st.spinner("Authenticating with Garmin..."):
+                                        success, message = generate_garmin_token(
+                                            garmin_email, password, tokens_dir
+                                        )
+                                    if success:
+                                        st.success(message)
+                                        st.session_state[f"show_token_form_{idx}"] = False
+                                        st.rerun()
+                                    else:
+                                        st.error(message)
+                                else:
+                                    st.error("Password required")
+
+                        with col_cancel:
+                            if st.button("Cancel", key=f"cancel_token_{idx}"):
+                                st.session_state[f"show_token_form_{idx}"] = False
+                                st.rerun()
 
     # Show all available tokens
     with st.expander("All Available Tokens"):
@@ -363,6 +443,37 @@ pdm run python tools/import_tokens.py""",
     # MQTT settings
     st.subheader("MQTT")
     mqtt_config = config.get("mqtt", {})
+
+    # Test MQTT connection
+    def test_mqtt_connection(host: str, port: int) -> bool:
+        """Test MQTT broker connection."""
+        try:
+            import socket
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(3)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            return result == 0
+        except Exception:
+            return False
+
+    mqtt_host_val = mqtt_config.get("host", "192.168.40.19")
+    mqtt_port_val = mqtt_config.get("port", 1883)
+    mqtt_connected = test_mqtt_connection(mqtt_host_val, mqtt_port_val)
+
+    # Show connection status (same style as Garmin Account Status)
+    st.markdown("**Broker Status**")
+    if mqtt_connected:
+        st.success(
+            f"**Connected:** {mqtt_host_val}:{mqtt_port_val}",
+            icon=":material/check_circle:",
+        )
+    else:
+        st.error(
+            f"**Unreachable:** {mqtt_host_val}:{mqtt_port_val}",
+            icon=":material/error:",
+        )
 
     col1, col2, col3 = st.columns(3)
     with col1:

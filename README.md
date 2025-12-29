@@ -29,7 +29,7 @@ Bridge between OMRON blood pressure monitors (BLE) and Garmin Connect + MQTT.
 curl -sSL https://pdm-project.org/install-pdm.py | python3 -
 
 # Clone and install
-git clone https://github.com/your-repo/omron-garmin-bridge.git
+git clone https://github.com/JacekZubielik/omron-garmin-bridge.git
 cd omron-garmin-bridge
 pdm install
 
@@ -44,6 +44,41 @@ pdm run python tools/import_tokens.py
 pdm run python -m src.main sync
 ```
 
+## Docker
+
+The bridge is available as a Docker image for easy deployment.
+
+### Production
+
+```bash
+cd docker
+
+# Pull and run latest stable image
+docker compose -f docker-compose.yaml pull
+docker compose -f docker-compose.yaml up -d
+
+# View logs
+docker compose -f docker-compose.yaml logs -f
+```
+
+### Development
+
+```bash
+cd docker
+
+# Pull and run dev image (built from feature branches)
+docker compose -f docker-compose.dev.yaml pull
+docker compose -f docker-compose.dev.yaml up -d
+```
+
+### Requirements
+
+- Bluetooth adapter on host (uses `network_mode: host` for BLE access)
+- `config/config.yaml` configured
+- Garmin tokens generated
+
+The Web UI is available at `http://localhost:8501`.
+
 ## Web UI (Streamlit)
 
 The bridge includes a web dashboard for monitoring and manual sync.
@@ -54,14 +89,24 @@ pdm run streamlit run streamlit_app/app.py
 
 Open `http://localhost:8501` in your browser.
 
+The UI displays version and environment badge (dev/prod/local) in the sidebar footer.
+
 ### Pages
 
-| Page          | Description                                           |
-| ------------- | ----------------------------------------------------- |
-| **Dashboard** | Last reading, average BP metrics, quick actions       |
-| **History**   | BP/pulse charts, filterable table, CSV export         |
-| **Sync**      | Manual sync with step-by-step instructions            |
-| **Settings**  | Configuration, Bluetooth pairing (sidebar), user maps |
+| Page          | Description                                                     |
+| ------------- | --------------------------------------------------------------- |
+| **Dashboard** | Last reading, average BP metrics, user filter (All/User1/User2) |
+| **History**   | BP/pulse charts, filterable table, CSV export                   |
+| **Sync**      | Manual sync with step-by-step instructions                      |
+| **Settings**  | Configuration, Bluetooth pairing, Garmin tokens, MQTT status    |
+
+### Settings Page Features
+
+- **Bluetooth pairing** - Scan and pair OMRON devices from the sidebar
+- **User mapping** - Map OMRON slots (1/2) to Garmin accounts
+- **Garmin token generation** - Generate OAuth tokens directly in UI (no CLI needed)
+- **MQTT broker status** - Real-time connection indicator
+- **Configuration editor** - Edit and save config.yaml
 
 ### Icons
 
@@ -133,10 +178,13 @@ omron:
 users:
   - name: "User1"
     omron_slot: 1 # Slot in OMRON device (1 or 2)
-    garmin_email: "user@example.com" # Garmin Connect email
+    garmin_email: "user1@example.com"
+  - name: "User2"
+    omron_slot: 2
+    garmin_email: "user2@example.com"
 
 garmin:
-  tokens_path: "./data/tokens" # OAuth tokens per user
+  tokens_path: "./data/tokens" # OAuth tokens stored per user
 
 mqtt:
   host: "192.168.40.19"
@@ -145,6 +193,22 @@ mqtt:
 
 deduplication:
   database_path: "./data/omron.db"
+```
+
+### Multi-User Support
+
+The bridge supports multiple users with separate Garmin accounts:
+
+- Each user is mapped to an OMRON device slot (1 or 2)
+- OAuth tokens are stored per user in `data/tokens/<email>/`
+- Generate tokens via Web UI (Settings > Garmin Connect) or CLI:
+
+```bash
+# Generate token for specific user
+pdm run python tools/import_tokens.py --email user1@example.com
+
+# Generate tokens for multiple users
+pdm run python tools/import_tokens.py --email user1@example.com --email user2@example.com
 ```
 
 ## Data Flow
@@ -232,7 +296,7 @@ omron-garmin-bridge/
 │   ├── main.py              # Main entry point (sync, daemon)
 │   ├── models.py            # BloodPressureReading dataclass
 │   ├── duplicate_filter.py  # SQLite deduplication
-│   ├── garmin_uploader.py   # Garmin Connect upload
+│   ├── garmin_uploader.py   # Garmin Connect upload (multi-user)
 │   ├── mqtt_publisher.py    # MQTT publishing
 │   └── omron_ble/           # BLE communication
 │       ├── client.py        # High-level BLE client
@@ -241,16 +305,25 @@ omron-garmin-bridge/
 ├── streamlit_app/           # Web UI
 │   ├── app.py               # Router (st.navigation)
 │   ├── components/
-│   │   └── icons.py         # Font Awesome icon helper
+│   │   ├── icons.py         # Font Awesome icon helper
+│   │   └── version.py       # Version display with env badge
 │   └── pages/
-│       ├── 0_Dashboard.py   # Last reading, averages
+│       ├── 0_Dashboard.py   # Last reading, averages, user filter
 │       ├── 1_History.py     # Charts and history table
 │       ├── 2_Sync.py        # Manual sync
-│       └── 3_Settings.py    # Config, BT pairing (sidebar)
+│       └── 3_Settings.py    # Config, BT pairing, token generation
+├── docker/                  # Docker deployment
+│   ├── Dockerfile
+│   ├── docker-compose.yaml      # Production
+│   └── docker-compose.dev.yaml  # Development
 ├── tools/                   # CLI utilities
+│   ├── import_tokens.py     # Generate Garmin OAuth tokens
+│   ├── pair_device.py       # Bluetooth pairing
+│   ├── scan_devices.py      # Scan for OMRON devices
+│   └── read_device.py       # Read records from device
 ├── tests/                   # Unit tests (72 tests)
 ├── config/                  # Configuration files
-└── data/                    # SQLite database, tokens
+└── data/                    # SQLite database, tokens per user
 ```
 
 ## Test Results
@@ -326,7 +399,3 @@ Special thanks to:
 ## License
 
 MIT
-
-# Test
-
-<!-- test -->
