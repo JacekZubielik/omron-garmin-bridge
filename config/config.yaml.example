@@ -21,18 +21,21 @@ users:
   - name: "User1"
     omron_slot: 1                     # Slot in OMRON device (1 or 2)
     garmin_email: "user@example.com"  # Garmin Connect email
+    garmin_enabled: true              # Enable Garmin upload for this user
+    mqtt_enabled: true                # Enable MQTT publish for this user
 
   # Uncomment for second user
   # - name: "User2"
   #   omron_slot: 2
   #   garmin_email: "user2@example.com"
+  #   garmin_enabled: true
+  #   mqtt_enabled: true
 
 # ----------------------------------------------------------------------------
 # Garmin Connect Configuration
 # ----------------------------------------------------------------------------
 garmin:
-  enabled: true
-  tokens_path: "./data/tokens"        # OAuth tokens (SEPARATE from mqtt-scale-garmin-bridge)
+  tokens_path: "./data/tokens"        # OAuth tokens directory (per-user subfolders)
 
 # ----------------------------------------------------------------------------
 # MQTT Configuration

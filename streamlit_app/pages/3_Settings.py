@@ -284,58 +284,63 @@ sudo systemctl restart bluetooth""",
     st.subheader("Garmin Connect")
     garmin_config = config.get("garmin", {})
 
-    col1, col2 = st.columns(2)
-    with col1:
-        garmin_enabled = st.checkbox(
-            "Enable Garmin Upload",
-            value=garmin_config.get("enabled", True),
-        )
-    with col2:
-        tokens_path = st.text_input(
-            "Tokens Path",
-            value=garmin_config.get("tokens_path", "./data/tokens"),
-        )
+    tokens_path = st.text_input(
+        "Tokens Path",
+        value=garmin_config.get("tokens_path", "./data/tokens"),
+    )
 
     # Token status per user
     tokens_dir = project_root / "data" / "tokens"
     users_config = config.get("users", [])
 
-    st.markdown("**Account Tokens**")
+    st.markdown("**Account Status**")
 
     if not users_config:
         st.info("Configure users in User Mapping section below first.")
     else:
-        for user in users_config:
+        for idx, user in enumerate(users_config):
             user_name = user.get("name", "Unknown")
             garmin_email = user.get("garmin_email", "")
             omron_slot = user.get("omron_slot", "?")
+            garmin_user_enabled = user.get("garmin_enabled", True)
 
-            if not garmin_email:
-                st.warning(
-                    f"**User {omron_slot} ({user_name}):** No Garmin email configured",
-                    icon=":material/warning:",
-                )
-                continue
+            col1, col2 = st.columns([3, 1])
 
-            # Check token status
-            token_status = get_token_status(tokens_dir, garmin_email)
+            with col1:
+                if not garmin_email:
+                    st.warning(
+                        f"**User {omron_slot} ({user_name}):** No Garmin email configured",
+                        icon=":material/warning:",
+                    )
+                else:
+                    # Check token status
+                    token_status = get_token_status(tokens_dir, garmin_email)
 
-            if token_status["valid"]:
-                display_name = token_status.get("display_name") or garmin_email
-                st.success(
-                    f"**User {omron_slot} ({user_name}):** {display_name}",
-                    icon=":material/check_circle:",
-                )
-            elif token_status["exists"]:
-                st.error(
-                    f"**User {omron_slot} ({user_name}):** Token expired - {garmin_email}",
-                    icon=":material/error:",
-                )
-            else:
-                st.warning(
-                    f"**User {omron_slot} ({user_name}):** No token - {garmin_email}",
-                    icon=":material/warning:",
-                )
+                    if token_status["valid"]:
+                        display_name = token_status.get("display_name") or garmin_email
+                        status_text = f"**User {omron_slot} ({user_name}):** {display_name}"
+                        if not garmin_user_enabled:
+                            status_text += " (disabled)"
+                        st.success(status_text, icon=":material/check_circle:")
+                    elif token_status["exists"]:
+                        st.error(
+                            f"**User {omron_slot} ({user_name}):** Token expired - {garmin_email}",
+                            icon=":material/error:",
+                        )
+                    else:
+                        st.warning(
+                            f"**User {omron_slot} ({user_name}):** No token - {garmin_email}",
+                            icon=":material/warning:",
+                        )
+
+            with col2:
+                if garmin_email:
+                    st.checkbox(
+                        "Enabled",
+                        value=garmin_user_enabled,
+                        key=f"garmin_enabled_{idx}",
+                        help=f"Enable Garmin upload for {user_name}",
+                    )
 
     # Show all available tokens
     with st.expander("All Available Tokens"):
@@ -374,10 +379,6 @@ pdm run python tools/import_tokens.py""",
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        mqtt_enabled = st.checkbox(
-            "Enable MQTT",
-            value=mqtt_config.get("enabled", True),
-        )
         mqtt_host = st.text_input(
             "MQTT Host",
             value=mqtt_config.get("host", "192.168.40.19"),
@@ -408,7 +409,7 @@ pdm run python tools/import_tokens.py""",
 
     # Users configuration
     st.subheader("User Mapping")
-    st.markdown("Map OMRON device slots to Garmin accounts")
+    st.markdown("Map OMRON device slots to Garmin accounts and enable/disable sync")
 
     # Use users_config from earlier (already loaded for Garmin section)
     if not users_config:
@@ -416,10 +417,10 @@ pdm run python tools/import_tokens.py""",
 
     for i in range(2):  # Max 2 users (OMRON slots 1 and 2)
         user = users_config[i] if i < len(users_config) else {}
-        col1, col2 = st.columns(2)
+        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
         with col1:
             st.text_input(
-                f"OMRON User {i + 1} Slot - Name",
+                f"User {i + 1} - Name",
                 value=user.get("name", ""),
                 key=f"user_{i}_name",
                 help=f"Name for user in OMRON slot {i + 1}",
@@ -430,6 +431,20 @@ pdm run python tools/import_tokens.py""",
                 value=user.get("garmin_email", ""),
                 key=f"user_{i}_email",
                 help=f"Garmin account email for OMRON slot {i + 1}",
+            )
+        with col3:
+            st.checkbox(
+                "Garmin",
+                value=user.get("garmin_enabled", True),
+                key=f"user_{i}_garmin_enabled",
+                help=f"Enable Garmin upload for user {i + 1}",
+            )
+        with col4:
+            st.checkbox(
+                "MQTT",
+                value=user.get("mqtt_enabled", True),
+                key=f"user_{i}_mqtt_enabled",
+                help=f"Enable MQTT publish for user {i + 1}",
             )
 
     st.markdown("---")
@@ -450,16 +465,16 @@ pdm run python tools/import_tokens.py""",
                     "name": st.session_state.get(f"user_{i}_name", ""),
                     "omron_slot": i + 1,
                     "garmin_email": st.session_state.get(f"user_{i}_email", ""),
+                    "garmin_enabled": st.session_state.get(f"user_{i}_garmin_enabled", True),
+                    "mqtt_enabled": st.session_state.get(f"user_{i}_mqtt_enabled", True),
                 }
                 for i in range(2)
                 if st.session_state.get(f"user_{i}_email")
             ],
             "garmin": {
-                "enabled": garmin_enabled,
                 "tokens_path": tokens_path,
             },
             "mqtt": {
-                "enabled": mqtt_enabled,
                 "host": mqtt_host,
                 "port": mqtt_port,
                 "base_topic": mqtt_topic,

@@ -104,10 +104,6 @@ class OmronGarminBridge:
             True if initialization successful
         """
         garmin_config = self.config.get("garmin", {})
-        if not garmin_config.get("enabled", True):
-            logger.info("Garmin upload disabled in config")
-            return False
-
         tokens_path = garmin_config.get("tokens_path", "./data/tokens")
         self.garmin = GarminUploader(tokens_path=tokens_path)
 
@@ -126,10 +122,6 @@ class OmronGarminBridge:
             True if connection successful
         """
         mqtt_config = self.config.get("mqtt", {})
-        if not mqtt_config.get("enabled", True):
-            logger.info("MQTT publishing disabled in config")
-            return False
-
         self.mqtt = MQTTPublisher(
             host=mqtt_config.get("host", "192.168.40.19"),
             port=mqtt_config.get("port", 1883),

@@ -73,22 +73,26 @@ def main() -> None:
                 user_name = user.get("name", f"User {user.get('omron_slot', '?')}")
                 omron_slot = user.get("omron_slot", 1)
                 garmin_email = user.get("garmin_email", "")
+                # Read per-user enabled from config (default True)
+                garmin_config_enabled = user.get("garmin_enabled", True)
+                mqtt_config_enabled = user.get("mqtt_enabled", True)
 
                 with st.container():
                     st.markdown(f"**{user_name}** (Slot {omron_slot})")
                     col_g, col_m = st.columns(2)
                     with col_g:
                         garmin_label = "Garmin" if garmin_email else "Garmin (no token)"
+                        # Use config value as default, disabled if no email
                         sync_garmin_users[omron_slot] = st.checkbox(
                             garmin_label,
-                            value=bool(garmin_email),
+                            value=garmin_config_enabled and bool(garmin_email),
                             key=f"sync_garmin_{omron_slot}",
                             disabled=not garmin_email,
                         )
                     with col_m:
                         sync_mqtt_users[omron_slot] = st.checkbox(
                             "MQTT",
-                            value=True,
+                            value=mqtt_config_enabled,
                             key=f"sync_mqtt_{omron_slot}",
                         )
 
