@@ -20,8 +20,8 @@ WORKDIR /app
 # Install PDM
 RUN pip install --no-cache-dir pdm
 
-# Copy dependency files
-COPY pyproject.toml pdm.lock ./
+# Copy dependency files and README (required by pyproject.toml)
+COPY pyproject.toml pdm.lock README.md ./
 
 # Install dependencies (production only)
 RUN pdm install --prod --no-lock --no-editable
