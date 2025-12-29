@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.1.5 (2025-12-29)
+
+### Bug Fixes
+
+- **config**: Replace global enabled flags with per-user garmin_enabled/mqtt_enabled
+  ([#2](https://github.com/JacekZubielik/omron-garmin-bridge/pull/2),
+  [`513e3d8`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/513e3d85394565a9b13ad50b90339afa84a2f7eb))
+
+- **ui**: Add per-user sync options and fix dev compose volumes
+  ([#2](https://github.com/JacekZubielik/omron-garmin-bridge/pull/2),
+  [`513e3d8`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/513e3d85394565a9b13ad50b90339afa84a2f7eb))
+
+- **ui**: Add user slot filter and multi-user Garmin token support
+  ([#2](https://github.com/JacekZubielik/omron-garmin-bridge/pull/2),
+  [`513e3d8`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/513e3d85394565a9b13ad50b90339afa84a2f7eb))
+
+### Refactoring
+
+- **settings**: Remove per-user garmin/mqtt enable options
+  ([#2](https://github.com/JacekZubielik/omron-garmin-bridge/pull/2),
+  [`513e3d8`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/513e3d85394565a9b13ad50b90339afa84a2f7eb))
+
+
 ## v0.1.4 (2025-12-29)
 
 ### Bug Fixes
