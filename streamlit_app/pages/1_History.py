@@ -17,6 +17,7 @@ sys.path.insert(0, str(project_root))
 
 from src.duplicate_filter import DuplicateFilter  # noqa: E402
 from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
+from streamlit_app.components.version import show_version_footer  # noqa: E402
 
 
 def get_db() -> DuplicateFilter:
@@ -50,7 +51,7 @@ def main() -> None:
         )
         limit = st.number_input("Max records", min_value=10, max_value=1000, value=100)
         st.markdown("---")
-        st.caption("OMRON Garmin Bridge v0.1.0")
+        show_version_footer()
 
     st.markdown(f"# {ICONS['table']} Reading History", unsafe_allow_html=True)
     st.markdown("Browse and filter blood pressure readings")

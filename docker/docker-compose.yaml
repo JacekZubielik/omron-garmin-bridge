@@ -47,6 +47,7 @@ services:
       - TZ=Europe/Warsaw
       - PYTHONUNBUFFERED=1
       - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+      - IMAGE_TAG=prod
 
     # Health check
     healthcheck:

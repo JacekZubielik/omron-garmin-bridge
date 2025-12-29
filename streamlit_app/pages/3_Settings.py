@@ -13,6 +13,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
+from streamlit_app.components.version import show_version_footer  # noqa: E402
 
 
 def main() -> None:
@@ -71,7 +72,7 @@ def main() -> None:
         else:
             st.info("No paired OMRON devices")
         st.markdown("---")
-        st.caption("OMRON Garmin Bridge v0.1.0")
+        show_version_footer()
 
     st.markdown(f"# {ICONS['settings']} Settings", unsafe_allow_html=True)
     st.markdown("Configure OMRON Garmin Bridge")
