@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.1.4 (2025-12-29)
+
+### Bug Fixes
+
+- **ci**: Use pdm run python in Docker test
+  ([#1](https://github.com/JacekZubielik/omron-garmin-bridge/pull/1),
+  [`b299a3a`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/b299a3a27f49fca3abbf61f0603cde651042a684))
+
+- **docker**: Add docker-compose files for prod and dev images
+  ([#1](https://github.com/JacekZubielik/omron-garmin-bridge/pull/1),
+  [`b299a3a`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/b299a3a27f49fca3abbf61f0603cde651042a684))
+
+- **ui**: Add dynamic version display with environment badge
+  ([#1](https://github.com/JacekZubielik/omron-garmin-bridge/pull/1),
+  [`b299a3a`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/b299a3a27f49fca3abbf61f0603cde651042a684))
+
+### Documentation
+
+- **changelog**: Fix Unreleased section to v0.1.2 [skip ci]
+  ([`225ec54`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/225ec545be689c6b7c17710bf41d1a1340340ae2))
+
+
 ## v0.1.3 (2025-12-29)
 
 ### Bug Fixes
