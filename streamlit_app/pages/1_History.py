@@ -1,4 +1,4 @@
-"""Dashboard page - Overview of blood pressure readings."""
+"""History page - Detailed reading history with filtering."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
@@ -16,8 +17,6 @@ sys.path.insert(0, str(project_root))
 
 from src.duplicate_filter import DuplicateFilter  # noqa: E402
 from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
-
-st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
 
 
 def get_db() -> DuplicateFilter:
@@ -30,69 +29,112 @@ def get_db() -> DuplicateFilter:
 
 
 def main() -> None:
-    """Dashboard page."""
+    """History page."""
     load_fontawesome()
 
+    db = get_db()
+
+    # Sidebar - Filters
     with st.sidebar:
+        st.subheader("Filters")
+        days = st.selectbox(
+            "Time Range",
+            options=[7, 14, 30, 90, 365, 0],
+            format_func=lambda x: f"Last {x} days" if x > 0 else "All time",
+            index=2,
+        )
+        user_slot = st.selectbox(
+            "User Slot",
+            options=[None, 1, 2],
+            format_func=lambda x: "All users" if x is None else f"User {x}",
+        )
+        limit = st.number_input("Max records", min_value=10, max_value=1000, value=100)
         st.markdown("---")
         st.caption("OMRON Garmin Bridge v0.1.0")
 
-    st.markdown(f"# {ICONS['chart']} Dashboard", unsafe_allow_html=True)
-    st.markdown("Blood pressure monitoring overview")
+    st.markdown(f"# {ICONS['table']} Reading History", unsafe_allow_html=True)
+    st.markdown("Browse and filter blood pressure readings")
 
-    db = get_db()
-    _ = db.get_statistics()  # Validate DB connection
-
-    # Date range filter
-    col1, col2, col3 = st.columns([2, 2, 1])
-    with col1:
-        days = st.selectbox(
-            "Time Range",
-            options=[7, 14, 30, 90, 365],
-            format_func=lambda x: f"Last {x} days",
-            index=1,
-        )
-    with col3:
-        if st.button("Refresh", icon=":material/refresh:"):
-            st.rerun()
-
-    # Get history for selected period
+    # Get data
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    history = db.get_history(limit=1000, start_date=start_date, end_date=end_date)
+    start_date = end_date - timedelta(days=days) if days > 0 else None
+
+    history = db.get_history(
+        limit=limit,
+        user_slot=user_slot,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
     if not history:
-        st.warning("No readings found for selected period.")
+        st.warning("No readings found with selected filters.")
         return
 
-    # Summary metrics
+    # Convert to DataFrame for display
+    df = pd.DataFrame(history)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    # Table section
     st.markdown("---")
-    st.subheader("Averages")
-    col1, col2, col3, col4 = st.columns(4)
+    st.subheader(f"Found {len(history)} readings")
+    show_flags_only = st.checkbox("Show only readings with flags")
 
-    with col1:
-        avg_sys = sum(r["systolic"] for r in history) / len(history)
-        st.metric("Systolic", f"{avg_sys:.0f} mmHg")
+    if show_flags_only:
+        history = [r for r in history if r.get("irregular_heartbeat") or r.get("body_movement")]
+        if not history:
+            st.warning("No readings with flags found.")
+            return
+        # Rebuild df after filtering
+        df = pd.DataFrame(history)
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-    with col2:
-        avg_dia = sum(r["diastolic"] for r in history) / len(history)
-        st.metric("Diastolic", f"{avg_dia:.0f} mmHg")
+    # Build display data like Dashboard
+    display_data = []
+    for _, r in df.iterrows():
+        flags = []
+        if r.get("irregular_heartbeat"):
+            flags.append("IHB")
+        if r.get("body_movement"):
+            flags.append("MOV")
 
-    with col3:
-        avg_pulse = sum(r["pulse"] for r in history) / len(history)
-        st.metric("Pulse", f"{avg_pulse:.0f} bpm")
+        # Format timestamp
+        formatted_time = r["timestamp"].strftime("%d %b %Y, %H:%M")
 
-    with col4:
-        st.metric("Readings", len(history))
+        display_data.append(
+            {
+                "Date": formatted_time,
+                "SYS": r["systolic"],
+                "DIA": r["diastolic"],
+                "Pulse": r["pulse"],
+                "Category": (
+                    r["category"].replace("_", " ").title() if r.get("category") else "Unknown"
+                ),
+                "Flags": ", ".join(flags) if flags else "-",
+                "Garmin": "✓" if r.get("garmin_uploaded") else "✗",
+                "MQTT": "✓" if r.get("mqtt_published") else "✗",
+            }
+        )
+
+    st.dataframe(display_data, width="stretch", hide_index=True)
+
+    # CSV export
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Download as CSV",
+        icon=":material/download:",
+        data=csv,
+        file_name=f"blood_pressure_history_{datetime.now().strftime('%Y%m%d')}.csv",
+        mime="text/csv",
+    )
 
     # Blood Pressure Chart
     st.markdown("---")
     st.subheader("Blood Pressure Trend")
 
     # Prepare data for chart
-    dates = [datetime.fromisoformat(r["timestamp"]) for r in history]
-    systolic = [r["systolic"] for r in history]
-    diastolic = [r["diastolic"] for r in history]
+    dates = df["timestamp"].tolist()
+    systolic = df["systolic"].tolist()
+    diastolic = df["diastolic"].tolist()
 
     fig = go.Figure()
     fig.add_trace(
@@ -101,7 +143,7 @@ def main() -> None:
             y=systolic,
             mode="lines+markers",
             name="Systolic",
-            line={"color": "#e74c3c", "width": 2},
+            line={"color": "#dc3545", "width": 2},
             marker={"size": 6},
         )
     )
@@ -127,13 +169,14 @@ def main() -> None:
         yaxis_title="mmHg",
         hovermode="x unified",
         legend={"yanchor": "top", "y": 0.99, "xanchor": "left", "x": 0.01},
+        margin={"t": 20},
     )
 
     st.plotly_chart(fig, width="stretch")
 
     # Pulse Chart
     st.subheader("Heart Rate Trend")
-    pulse = [r["pulse"] for r in history]
+    pulse = df["pulse"].tolist()
 
     fig_pulse = go.Figure()
     fig_pulse.add_trace(
@@ -155,6 +198,7 @@ def main() -> None:
         xaxis_title="Date",
         yaxis_title="BPM",
         hovermode="x unified",
+        margin={"t": 20},
     )
 
     st.plotly_chart(fig_pulse, width="stretch")

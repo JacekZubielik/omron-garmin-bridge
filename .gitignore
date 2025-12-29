@@ -116,3 +116,6 @@ docker-compose.override.yaml
 *.tmp
 *.temp
 *.bak
+
+docs/
+tests/

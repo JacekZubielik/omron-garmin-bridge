@@ -14,8 +14,6 @@ sys.path.insert(0, str(project_root))
 
 from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
 
-st.set_page_config(page_title="Sync", page_icon="🔄", layout="wide")
-
 
 def main() -> None:
     """Sync page."""

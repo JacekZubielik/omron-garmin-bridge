@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PDM
+        run: pip install pdm
+
+      - name: Install dependencies
+        run: pdm install -G lint
+
+      - name: Run Ruff (linting)
+        run: pdm run ruff check src/ streamlit_app/
+
+      - name: Run Black (formatting check)
+        run: pdm run black --check src/ streamlit_app/
+
+      - name: Run isort (import sorting check)
+        run: pdm run isort --check-only src/ streamlit_app/
+
+      - name: Run mypy (type checking)
+        run: pdm run mypy src/
+
+      - name: Run bandit (security check)
+        run: pdm run bandit -r src/ -c pyproject.toml
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PDM
+        run: pip install pdm
+
+      - name: Install dependencies
+        run: pdm install -G test
+
+      - name: Run tests
+        run: pdm run pytest tests/ -v --tb=short
+
+  build-dev:
+    name: Build & Push Dev Image
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    # Only on push to feature branches, not on PRs
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract branch name
+        id: branch
+        run: echo "name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=dev
+            type=sha,prefix=sha-
+            type=ref,event=branch,prefix=dev-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  build-test:
+    name: Build Docker (PR validation)
+    runs-on: ubuntu-latest
+    needs: lint
+    # Only on PRs - build but don't push
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f docker/Dockerfile -t omron-garmin-bridge:pr-${{ github.event.number }} .
+
+      - name: Test Docker image
+        run: |
+          docker run --rm omron-garmin-bridge:pr-${{ github.event.number }} python -c "import src.main; print('Import OK')"

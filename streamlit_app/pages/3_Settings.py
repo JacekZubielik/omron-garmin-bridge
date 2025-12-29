@@ -14,14 +14,62 @@ sys.path.insert(0, str(project_root))
 
 from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
 
-st.set_page_config(page_title="Settings", page_icon="⚙", layout="wide")
-
 
 def main() -> None:
     """Settings page."""
     load_fontawesome()
 
+    # Get paired/trusted devices from bluetoothctl
+    def get_paired_devices() -> dict[str, dict[str, bool]]:
+        """Get paired and trusted status from bluetoothctl."""
+        import subprocess  # nosec B404
+
+        result: dict[str, dict[str, bool]] = {}
+        try:
+            # Get paired devices
+            paired_output = subprocess.run(
+                ["bluetoothctl", "devices", "Paired"],  # nosec B603 B607
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            for line in paired_output.stdout.strip().split("\n"):
+                if line.startswith("Device "):
+                    parts = line.split(" ", 2)
+                    if len(parts) >= 2:
+                        mac = parts[1]
+                        result[mac] = {"paired": True, "trusted": False}
+
+            # Check trusted status for each paired device
+            for mac in result:
+                info_output = subprocess.run(
+                    ["bluetoothctl", "info", mac],  # nosec B603 B607
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if "Trusted: yes" in info_output.stdout:
+                    result[mac]["trusted"] = True
+        except Exception:  # nosec B110
+            pass
+        return result
+
+    paired_status = get_paired_devices()
+
     with st.sidebar:
+        st.subheader("Bluetooth Pairing")
+        st.markdown("**Paired devices**")
+        omron_paired = {k: v for k, v in paired_status.items() if k.startswith("00:5F:BF")}
+        if omron_paired:
+            for mac, status in omron_paired.items():
+                paired_icon = ICONS["check"] if status["paired"] else ICONS["xmark"]
+                trusted_icon = ICONS["lock"] if status["trusted"] else ICONS["unlock"]
+                st.markdown(
+                    f"`{mac}`<br>Paired: {paired_icon} Trusted: {trusted_icon}",
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.info("No paired OMRON devices")
         st.markdown("---")
         st.caption("OMRON Garmin Bridge v0.1.0")
 
@@ -83,66 +131,13 @@ def main() -> None:
             value=omron_config.get("sync_time", True),
         )
 
-    # Bluetooth Pairing section
+    # Scan/Pair section
     st.markdown("---")
     st.subheader("Bluetooth Pairing")
 
     # Initialize session state for scanned devices
     if "scanned_devices" not in st.session_state:
         st.session_state.scanned_devices = []
-
-    # Get paired/trusted devices from bluetoothctl
-    def get_paired_devices() -> dict[str, dict[str, bool]]:
-        """Get paired and trusted status from bluetoothctl."""
-        import subprocess  # nosec B404
-
-        result: dict[str, dict[str, bool]] = {}
-        try:
-            # Get paired devices
-            paired_output = subprocess.run(
-                ["bluetoothctl", "devices", "Paired"],  # nosec B603 B607
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            for line in paired_output.stdout.strip().split("\n"):
-                if line.startswith("Device "):
-                    parts = line.split(" ", 2)
-                    if len(parts) >= 2:
-                        mac = parts[1]
-                        result[mac] = {"paired": True, "trusted": False}
-
-            # Check trusted status for each paired device
-            for mac in result:
-                info_output = subprocess.run(
-                    ["bluetoothctl", "info", mac],  # nosec B603 B607
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
-                if "Trusted: yes" in info_output.stdout:
-                    result[mac]["trusted"] = True
-        except Exception:  # nosec B110
-            pass
-        return result
-
-    paired_status = get_paired_devices()
-
-    # Show currently paired OMRON devices
-    st.markdown("**Paired devices**")
-    omron_paired = {k: v for k, v in paired_status.items() if k.startswith("00:5F:BF")}
-    if omron_paired:
-        for mac, status in omron_paired.items():
-            paired_icon = ICONS["check"] if status["paired"] else ICONS["xmark"]
-            trusted_icon = ICONS["lock"] if status["trusted"] else ICONS["unlock"]
-            st.markdown(
-                f"`{mac}` - Paired: {paired_icon} Trusted: {trusted_icon}",
-                unsafe_allow_html=True,
-            )
-    else:
-        st.info("No paired OMRON devices found")
-
-    st.markdown("---")
 
     col1, col2 = st.columns(2)
 
