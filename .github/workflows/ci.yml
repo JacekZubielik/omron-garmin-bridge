@@ -122,4 +122,4 @@ jobs:
 
       - name: Test Docker image
         run: |
-          docker run --rm omron-garmin-bridge:pr-${{ github.event.number }} python -c "import src.main; print('Import OK')"
+          docker run --rm omron-garmin-bridge:pr-${{ github.event.number }} pdm run python -c "import src.main; print('Import OK')"

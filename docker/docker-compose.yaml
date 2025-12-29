@@ -1,0 +1,64 @@
+# =============================================================================
+# Docker Compose - Production Image
+# =============================================================================
+# Uses the latest production image from ghcr.io
+#
+# Usage:
+#   docker compose -f docker/docker-compose.yaml up -d
+#   docker compose -f docker/docker-compose.yaml logs -f
+#   docker compose -f docker/docker-compose.yaml down
+#
+# Requirements:
+#   - Create config/config.yaml from config/config.yaml.example
+#   - Generate Garmin tokens: python tools/import_tokens.py
+#   - Pair OMRON device: python tools/pair_device.py
+#   - Bluetooth adapter must be available on host
+
+services:
+  omron-bridge:
+    image: ghcr.io/jacekzubielik/omron-garmin-bridge:latest
+    container_name: omron-garmin-bridge
+    restart: unless-stopped
+
+    # Bluetooth access - required for BLE communication
+    privileged: true
+    network_mode: host
+
+    volumes:
+      # Configuration
+      - ../config/config.yaml:/app/config/config.yaml:ro
+
+      # Persistent data (database, tokens, backups, logs)
+      - ../data:/app/data
+
+      # Logs
+      - ../logs:/app/logs
+
+      # D-Bus system bus - required for BlueZ communication
+      - /var/run/dbus:/var/run/dbus
+
+      # Bluetooth runtime directory
+      - /run/dbus:/run/dbus
+
+      # BlueZ configuration and state
+      - /var/lib/bluetooth:/var/lib/bluetooth:ro
+
+    environment:
+      - TZ=Europe/Warsaw
+      - PYTHONUNBUFFERED=1
+      - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+      - IMAGE_TAG=prod
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

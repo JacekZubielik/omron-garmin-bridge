@@ -24,6 +24,7 @@ from streamlit_app.components.icons import (  # noqa: E402
     get_bp_category_icon,
     load_fontawesome,
 )
+from streamlit_app.components.version import show_version_footer  # noqa: E402  # type: ignore
 
 # Load Font Awesome
 load_fontawesome()
@@ -80,7 +81,7 @@ def main() -> None:
             st.caption(f"To: {stats['last_record'][:10]}")
 
         st.markdown("---")
-        st.caption("OMRON Garmin Bridge v0.1.0")
+        show_version_footer()
 
     # Main content - Dashboard
     col1, col2 = st.columns(2)
