@@ -130,12 +130,15 @@ omron:
   mac_address: "00:5F:BF:91:9B:4B" # Optional - will scan if not set
   poll_interval_minutes: 60
 
+users:
+  - name: "User1"
+    omron_slot: 1 # Slot in OMRON device (1 or 2)
+    garmin_email: "user@example.com" # Garmin Connect email
+
 garmin:
-  enabled: true
-  tokens_path: "./data/tokens"
+  tokens_path: "./data/tokens" # OAuth tokens per user
 
 mqtt:
-  enabled: true
   host: "192.168.40.19"
   port: 1883
   base_topic: "omron/blood_pressure"
@@ -302,21 +305,20 @@ Check that the MQTT broker is running:
 mosquitto_pub -h 192.168.40.19 -t test -m "hello"
 ```
 
-
-
 ## Acknowledgments
 
 This project uses code and concepts from the following projects:
 
-| Project | Author | Usage | License |
-|---------|--------|-------|---------|
-| [omblepy](https://github.com/userx14/omblepy) | userx14 | BLE protocol implementation (`src/omron_ble/`) - core communication with OMRON devices | No license specified |
-| [UBPM](https://codeberg.org/LazyT/ubpm) | LazyT | Protocol analysis and multi-channel BLE reception concepts | GPL-3.0 |
-| [export2garmin](https://github.com/RobertWojtowicz/export2garmin) | RobertWojtowicz | Garmin Connect integration patterns | MIT |
-| [python-garminconnect](https://github.com/cyberjunky/python-garminconnect) | cyberjunky | Garmin Connect API library (used as dependency) | MIT |
-| [bleak](https://github.com/hbldh/bleak) | hbldh | Async BLE library for Python (used as dependency) | MIT |
+| Project                                                                    | Author          | Usage                                                                                  | License              |
+| -------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------- | -------------------- |
+| [omblepy](https://github.com/userx14/omblepy)                              | userx14         | BLE protocol implementation (`src/omron_ble/`) - core communication with OMRON devices | No license specified |
+| [UBPM](https://codeberg.org/LazyT/ubpm)                                    | LazyT           | Protocol analysis and multi-channel BLE reception concepts                             | GPL-3.0              |
+| [export2garmin](https://github.com/RobertWojtowicz/export2garmin)          | RobertWojtowicz | Garmin Connect integration patterns                                                    | MIT                  |
+| [python-garminconnect](https://github.com/cyberjunky/python-garminconnect) | cyberjunky      | Garmin Connect API library (used as dependency)                                        | MIT                  |
+| [bleak](https://github.com/hbldh/bleak)                                    | hbldh           | Async BLE library for Python (used as dependency)                                      | MIT                  |
 
 Special thanks to:
+
 - **userx14** for reverse-engineering the OMRON BLE protocol in omblepy
 - **LazyT** for UBPM which provided insights into multi-channel BLE communication
 - All contributors who tested various OMRON device models
@@ -324,5 +326,7 @@ Special thanks to:
 ## License
 
 MIT
+
 # Test
+
 <!-- test -->

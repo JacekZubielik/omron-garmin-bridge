@@ -21,15 +21,11 @@ users:
   - name: "User1"
     omron_slot: 1                     # Slot in OMRON device (1 or 2)
     garmin_email: "user@example.com"  # Garmin Connect email
-    garmin_enabled: true              # Enable Garmin upload for this user
-    mqtt_enabled: true                # Enable MQTT publish for this user
 
   # Uncomment for second user
   # - name: "User2"
   #   omron_slot: 2
   #   garmin_email: "user2@example.com"
-  #   garmin_enabled: true
-  #   mqtt_enabled: true
 
 # ----------------------------------------------------------------------------
 # Garmin Connect Configuration
@@ -41,7 +37,6 @@ garmin:
 # MQTT Configuration
 # ----------------------------------------------------------------------------
 mqtt:
-  enabled: true
   host: "192.168.40.19"
   port: 1883
   # username: "mqtt_user"             # Optional
