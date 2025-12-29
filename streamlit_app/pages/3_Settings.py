@@ -12,6 +12,7 @@ import yaml
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.garmin_uploader import get_token_status, list_available_tokens  # noqa: E402
 from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
 from streamlit_app.components.version import show_version_footer  # noqa: E402
 
@@ -283,26 +284,78 @@ sudo systemctl restart bluetooth""",
     st.subheader("Garmin Connect")
     garmin_config = config.get("garmin", {})
 
-    col1, col2 = st.columns(2)
-    with col1:
-        garmin_enabled = st.checkbox(
-            "Enable Garmin Upload",
-            value=garmin_config.get("enabled", True),
-        )
-    with col2:
-        tokens_path = st.text_input(
-            "Tokens Path",
-            value=garmin_config.get("tokens_path", "./data/tokens"),
-        )
+    tokens_path = st.text_input(
+        "Tokens Path",
+        value=garmin_config.get("tokens_path", "./data/tokens"),
+    )
 
-    # Check if tokens exist
+    # Token status per user
     tokens_dir = project_root / "data" / "tokens"
-    if tokens_dir.exists() and list(tokens_dir.glob("*.json")):
-        st.success("Garmin tokens found", icon=":material/check_circle:")
+    users_config = config.get("users", [])
+
+    st.markdown("**Account Status**")
+
+    if not users_config:
+        st.info("Configure users in User Mapping section below first.")
     else:
-        st.warning(
-            "Garmin tokens not found. Run: `pdm run python tools/import_tokens.py`",
-            icon=":material/warning:",
+        for user in users_config:
+            user_name = user.get("name", "Unknown")
+            garmin_email = user.get("garmin_email", "")
+            omron_slot = user.get("omron_slot", "?")
+
+            if not garmin_email:
+                st.warning(
+                    f"**User {omron_slot} ({user_name}):** No Garmin email configured",
+                    icon=":material/warning:",
+                )
+            else:
+                # Check token status
+                token_status = get_token_status(tokens_dir, garmin_email)
+
+                if token_status["valid"]:
+                    display_name = token_status.get("display_name") or garmin_email
+                    st.success(
+                        f"**User {omron_slot} ({user_name}):** {display_name}",
+                        icon=":material/check_circle:",
+                    )
+                elif token_status["exists"]:
+                    st.error(
+                        f"**User {omron_slot} ({user_name}):** Token expired - {garmin_email}",
+                        icon=":material/error:",
+                    )
+                else:
+                    st.warning(
+                        f"**User {omron_slot} ({user_name}):** No token - {garmin_email}",
+                        icon=":material/warning:",
+                    )
+
+    # Show all available tokens
+    with st.expander("All Available Tokens"):
+        available_tokens = list_available_tokens(tokens_dir)
+        if available_tokens:
+            for token in available_tokens:
+                status_icon = ICONS["check"] if token["valid"] else ICONS["xmark"]
+                display = token.get("display_name") or token["email"]
+                st.markdown(
+                    f"{status_icon} **{display}** ({token['email']})",
+                    unsafe_allow_html=True,
+                )
+                if token.get("error"):
+                    st.caption(f"Error: {token['error']}")
+        else:
+            st.info("No tokens found. Generate tokens using the CLI command above.")
+
+    with st.expander("CLI Token Commands"):
+        st.code(
+            """# Generate token for single user
+pdm run python tools/import_tokens.py --email user@example.com
+
+# Generate tokens for multiple users
+pdm run python tools/import_tokens.py --email user1@example.com --email user2@example.com
+
+# Interactive mode (prompts for email)
+pdm run python tools/import_tokens.py""",
+            language="bash",
         )
 
     st.markdown("---")
@@ -313,10 +366,6 @@ sudo systemctl restart bluetooth""",
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        mqtt_enabled = st.checkbox(
-            "Enable MQTT",
-            value=mqtt_config.get("enabled", True),
-        )
         mqtt_host = st.text_input(
             "MQTT Host",
             value=mqtt_config.get("host", "192.168.40.19"),
@@ -349,14 +398,16 @@ sudo systemctl restart bluetooth""",
     st.subheader("User Mapping")
     st.markdown("Map OMRON device slots to Garmin accounts")
 
-    users_config = config.get("users", [{"name": "User1", "omron_slot": 1, "garmin_email": ""}])
+    # Use users_config from earlier (already loaded for Garmin section)
+    if not users_config:
+        users_config = [{"name": "User1", "omron_slot": 1, "garmin_email": ""}]
 
     for i in range(2):  # Max 2 users (OMRON slots 1 and 2)
         user = users_config[i] if i < len(users_config) else {}
         col1, col2 = st.columns(2)
         with col1:
             st.text_input(
-                f"OMRON User {i + 1} Slot - Name",
+                f"User {i + 1} - Name",
                 value=user.get("name", ""),
                 key=f"user_{i}_name",
                 help=f"Name for user in OMRON slot {i + 1}",
@@ -392,11 +443,9 @@ sudo systemctl restart bluetooth""",
                 if st.session_state.get(f"user_{i}_email")
             ],
             "garmin": {
-                "enabled": garmin_enabled,
                 "tokens_path": tokens_path,
             },
             "mqtt": {
-                "enabled": mqtt_enabled,
                 "host": mqtt_host,
                 "port": mqtt_port,
                 "base_topic": mqtt_topic,

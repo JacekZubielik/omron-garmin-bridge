@@ -18,6 +18,89 @@ logger = logging.getLogger(__name__)
 DEFAULT_TOKENS_PATH = Path("~/.garminconnect").expanduser()
 
 
+def email_to_folder(email: str) -> str:
+    """Convert email to safe folder name.
+
+    Args:
+        email: Email address
+
+    Returns:
+        Safe folder name (@ replaced with _at_)
+    """
+    return email.replace("@", "_at_")
+
+
+def get_token_status(tokens_path: Path, email: str) -> dict:
+    """Check token status for a given email.
+
+    Args:
+        tokens_path: Base path to tokens directory
+        email: Garmin account email
+
+    Returns:
+        Dict with keys: exists, valid, error, display_name
+    """
+    token_dir = tokens_path / email_to_folder(email)
+    result = {
+        "exists": False,
+        "valid": False,
+        "error": None,
+        "display_name": None,
+        "token_dir": str(token_dir),
+    }
+
+    if not token_dir.exists():
+        result["error"] = "Token directory not found"
+        return result
+
+    # Check if token files exist
+    oauth1_file = token_dir / "oauth1_token.json"
+    oauth2_file = token_dir / "oauth2_token.json"
+
+    if not oauth1_file.exists() and not oauth2_file.exists():
+        result["error"] = "No token files found"
+        return result
+
+    result["exists"] = True
+
+    # Try to validate by logging in
+    try:
+        client = Garmin()
+        client.login(tokenstore=str(token_dir))
+        result["valid"] = True
+        result["display_name"] = client.display_name
+    except GarminConnectAuthenticationError as e:
+        result["error"] = f"Authentication failed: {e}"
+    except Exception as e:
+        result["error"] = f"Token validation error: {e}"
+
+    return result
+
+
+def list_available_tokens(tokens_path: Path) -> list[dict]:
+    """List all available token directories with their status.
+
+    Args:
+        tokens_path: Base path to tokens directory
+
+    Returns:
+        List of dicts with email and status info
+    """
+    if not tokens_path.exists():
+        return []
+
+    results = []
+    for item in tokens_path.iterdir():
+        if item.is_dir() and "_at_" in item.name:
+            # Convert folder name back to email
+            email = item.name.replace("_at_", "@")
+            status = get_token_status(tokens_path, email)
+            status["email"] = email
+            results.append(status)
+
+    return results
+
+
 class GarminUploader:
     """Upload blood pressure readings to Garmin Connect.
 
@@ -55,7 +138,7 @@ class GarminUploader:
             FileNotFoundError: If token files not found
         """
         # Determine token location
-        token_dir = self.tokens_path / email.replace("@", "_at_") if email else self.tokens_path
+        token_dir = self.tokens_path / email_to_folder(email) if email else self.tokens_path
 
         if not token_dir.exists():
             raise FileNotFoundError(

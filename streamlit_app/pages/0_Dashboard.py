@@ -46,13 +46,23 @@ def main() -> None:
     st.markdown(f"# {ICONS['heart']} Dashboard", unsafe_allow_html=True)
     st.markdown("---")
 
-    # Sidebar - Status
+    db = get_db()
+
+    # Sidebar - User filter and Status
     with st.sidebar:
+        # User slot filter
+        user_slot = st.selectbox(
+            "User",
+            options=[None, 1, 2],
+            format_func=lambda x: "All Users" if x is None else f"User {x}",
+            key="dashboard_user_slot",
+        )
+
+        st.markdown("---")
         st.header("Status")
 
-        # Get statistics
-        db = get_db()
-        stats = db.get_statistics()
+        # Get statistics (filtered by user_slot)
+        stats = db.get_statistics(user_slot=user_slot)
 
         # Connection status indicators
         st.subheader("Connections")
@@ -87,7 +97,7 @@ def main() -> None:
     col1, col2 = st.columns(2)
 
     # Last reading
-    history = db.get_history(limit=1)
+    history = db.get_history(limit=1, user_slot=user_slot)
     if history:
         last = history[0]
         with col1:
@@ -135,7 +145,7 @@ def main() -> None:
     st.markdown("---")
     st.subheader("Recent Readings")
 
-    history = db.get_history(limit=10)
+    history = db.get_history(limit=10, user_slot=user_slot)
     if history:
         # Convert to display format
         display_data = []
@@ -150,9 +160,12 @@ def main() -> None:
             ts = datetime.fromisoformat(r["timestamp"])
             formatted_time = ts.strftime("%d %b %Y, %H:%M")
 
-            display_data.append(
+            row: dict[str, str | int] = {"Date": formatted_time}
+            # Show User column only when "All Users" is selected
+            if user_slot is None:
+                row["User"] = r.get("user_slot", 1)
+            row.update(
                 {
-                    "Date": formatted_time,
                     "SYS": r["systolic"],
                     "DIA": r["diastolic"],
                     "Pulse": r["pulse"],
@@ -161,6 +174,7 @@ def main() -> None:
                     "MQTT": "✓" if r.get("mqtt_published") else "✗",
                 }
             )
+            display_data.append(row)
 
         st.dataframe(display_data, width="stretch", hide_index=True)
     else:

@@ -31,14 +31,12 @@ users:
 # Garmin Connect Configuration
 # ----------------------------------------------------------------------------
 garmin:
-  enabled: true
-  tokens_path: "./data/tokens"        # OAuth tokens (SEPARATE from mqtt-scale-garmin-bridge)
+  tokens_path: "./data/tokens"        # OAuth tokens directory (per-user subfolders)
 
 # ----------------------------------------------------------------------------
 # MQTT Configuration
 # ----------------------------------------------------------------------------
 mqtt:
-  enabled: true
   host: "192.168.40.19"
   port: 1883
   # username: "mqtt_user"             # Optional

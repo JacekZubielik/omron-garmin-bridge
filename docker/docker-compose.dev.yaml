@@ -32,11 +32,10 @@ services:
       - ../config/config.yaml:/app/config/config.yaml:ro
 
       # Persistent data (database, tokens, backups, logs)
-      # Using separate dev data directory to avoid conflicts with production
-      - ../data-dev:/app/data
+      - ../data:/app/data
 
       # Logs
-      - ../logs-dev:/app/logs
+      - ../logs:/app/logs
 
       # D-Bus system bus - required for BlueZ communication
       - /var/run/dbus:/var/run/dbus
