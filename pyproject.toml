@@ -46,6 +46,7 @@ build_command = ""
 upload_to_pypi = false
 tag_format = "v{version}"
 major_on_zero = false
+allow_zero_version = true
 
 [tool.semantic_release.changelog]
 exclude_commit_patterns = [
@@ -210,10 +211,6 @@ test = [
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.12.0",
 ]
-dev = [
-    "pre-commit>=3.6.0",
-    "commitizen>=3.13.0",
-]
 
 [tool.pdm.build]
 includes = ["src", "streamlit_app"]
@@ -226,4 +223,9 @@ lint = [
     "isort>=5.13.0",
     "bandit>=1.7.0",
     "types-PyYAML>=6.0.12.20250915",
+]
+dev = [
+    "pre-commit>=3.6.0",
+    "commitizen>=3.13.0",
+    "python-semantic-release>=10.5.3",
 ]
