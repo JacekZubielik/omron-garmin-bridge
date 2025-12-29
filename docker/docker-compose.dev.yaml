@@ -1,0 +1,69 @@
+# =============================================================================
+# Docker Compose - Development Image
+# =============================================================================
+# Uses the latest dev image from ghcr.io (built from feature branches)
+#
+# Usage:
+#   docker compose -f docker/docker-compose.dev.yaml up -d
+#   docker compose -f docker/docker-compose.dev.yaml logs -f
+#   docker compose -f docker/docker-compose.dev.yaml down
+#
+# Pull latest dev image:
+#   docker pull ghcr.io/jacekzubielik/omron-garmin-bridge:dev
+#
+# Requirements:
+#   - Create config/config.yaml from config/config.yaml.example
+#   - Generate Garmin tokens: python tools/import_tokens.py
+#   - Pair OMRON device: python tools/pair_device.py
+#   - Bluetooth adapter must be available on host
+
+services:
+  omron-bridge-dev:
+    image: ghcr.io/jacekzubielik/omron-garmin-bridge:dev
+    container_name: omron-garmin-bridge-dev
+    restart: unless-stopped
+
+    # Bluetooth access - required for BLE communication
+    privileged: true
+    network_mode: host
+
+    volumes:
+      # Configuration
+      - ../config/config.yaml:/app/config/config.yaml:ro
+
+      # Persistent data (database, tokens, backups, logs)
+      # Using separate dev data directory to avoid conflicts with production
+      - ../data-dev:/app/data
+
+      # Logs
+      - ../logs-dev:/app/logs
+
+      # D-Bus system bus - required for BlueZ communication
+      - /var/run/dbus:/var/run/dbus
+
+      # Bluetooth runtime directory
+      - /run/dbus:/run/dbus
+
+      # BlueZ configuration and state
+      - /var/lib/bluetooth:/var/lib/bluetooth:ro
+
+    environment:
+      - TZ=Europe/Warsaw
+      - PYTHONUNBUFFERED=1
+      - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+      # Enable debug logging for development
+      - LOG_LEVEL=DEBUG
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
