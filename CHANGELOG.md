@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.1.6 (2025-12-29)
+
+### Bug Fixes
+
+- Add MQTT broker status and Garmin token generation in UI
+  ([#3](https://github.com/JacekZubielik/omron-garmin-bridge/pull/3),
+  [`bf1f7c4`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/bf1f7c444aedc9c7c6e82717e4d163e3f20baf09))
+
+### Documentation
+
+- **readme**: Add Docker, multi-user, and UI features documentation
+  ([#3](https://github.com/JacekZubielik/omron-garmin-bridge/pull/3),
+  [`bf1f7c4`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/bf1f7c444aedc9c7c6e82717e4d163e3f20baf09))
+
+
 ## v0.1.5 (2025-12-29)
 
 ### Bug Fixes
