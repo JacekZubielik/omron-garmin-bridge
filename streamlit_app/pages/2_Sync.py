@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
+from typing import Any
 
 import streamlit as st
+import yaml
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -14,6 +16,17 @@ sys.path.insert(0, str(project_root))
 
 from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
 from streamlit_app.components.version import show_version_footer  # noqa: E402
+
+
+def load_users_config() -> list[dict[str, Any]]:
+    """Load users configuration from config.yaml."""
+    config_path = project_root / "config" / "config.yaml"
+    if config_path.exists():
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+        users: list[dict[str, Any]] = config.get("users", [])
+        return users
+    return []
 
 
 def main() -> None:
@@ -47,8 +60,50 @@ def main() -> None:
 
     with col2:
         st.subheader("Sync Options")
-        sync_garmin = st.checkbox("Upload to Garmin", value=True)
-        sync_mqtt = st.checkbox("Publish to MQTT", value=True)
+
+        # Load users from config
+        users = load_users_config()
+
+        if users:
+            st.markdown("**Per-user options:**")
+            sync_garmin_users: dict[int, bool] = {}
+            sync_mqtt_users: dict[int, bool] = {}
+
+            for user in users:
+                user_name = user.get("name", f"User {user.get('omron_slot', '?')}")
+                omron_slot = user.get("omron_slot", 1)
+                garmin_email = user.get("garmin_email", "")
+
+                with st.container():
+                    st.markdown(f"**{user_name}** (Slot {omron_slot})")
+                    col_g, col_m = st.columns(2)
+                    with col_g:
+                        garmin_label = "Garmin" if garmin_email else "Garmin (no token)"
+                        sync_garmin_users[omron_slot] = st.checkbox(
+                            garmin_label,
+                            value=bool(garmin_email),
+                            key=f"sync_garmin_{omron_slot}",
+                            disabled=not garmin_email,
+                        )
+                    with col_m:
+                        sync_mqtt_users[omron_slot] = st.checkbox(
+                            "MQTT",
+                            value=True,
+                            key=f"sync_mqtt_{omron_slot}",
+                        )
+
+            # Global flags based on per-user settings
+            sync_garmin = any(sync_garmin_users.values())
+            sync_mqtt = any(sync_mqtt_users.values())
+        else:
+            # Fallback if no users configured
+            st.warning("No users configured. Configure in Settings first.")
+            sync_garmin = st.checkbox("Upload to Garmin", value=True)
+            sync_mqtt = st.checkbox("Publish to MQTT", value=True)
+            sync_garmin_users = {}
+            sync_mqtt_users = {}
+
+        st.markdown("---")
         dry_run = st.checkbox("Dry run (no changes)", value=False)
 
     st.markdown("---")
