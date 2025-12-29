@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.1.3 (2025-12-29)
+
+### Bug Fixes
+
+- **ci**: Fix changelog generation and release workflow
+  ([`a9703d4`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/a9703d4ce7e76512c2988d48ddfa2062a357cac7))
+
+
 ## Unreleased
 
 ### Bug Fixes
