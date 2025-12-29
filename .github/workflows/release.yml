@@ -106,29 +106,35 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Run semantic-release and capture output
-          OUTPUT=$(semantic-release version --print 2>&1) || true
-          echo "$OUTPUT"
+          # Check what version would be released
+          NEXT_VERSION=$(semantic-release version --print 2>&1 | tail -1) || true
+          echo "Next version would be: $NEXT_VERSION"
 
-          # Check if a new version was released
-          if echo "$OUTPUT" | grep -q "No release will be made"; then
-            echo "released=false" >> $GITHUB_OUTPUT
-            echo "No release needed"
-          else
-            # Get the new version
-            VERSION=$(semantic-release version --print-last-released 2>/dev/null || echo "")
-            if [ -n "$VERSION" ]; then
-              echo "released=true" >> $GITHUB_OUTPUT
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-              echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-              echo "Released version $VERSION"
-
-              # Actually perform the release
-              semantic-release version
-              semantic-release publish
-            else
+          # Run semantic-release version (this creates tag and updates files)
+          if semantic-release version 2>&1 | tee /tmp/sr-output.txt; then
+            # Check if a release was actually made
+            if grep -q "No release will be made" /tmp/sr-output.txt; then
               echo "released=false" >> $GITHUB_OUTPUT
+              echo "No release needed"
+            else
+              # Get the version that was just released
+              VERSION=$(semantic-release version --print-last-released 2>/dev/null || echo "")
+              if [ -n "$VERSION" ]; then
+                echo "released=true" >> $GITHUB_OUTPUT
+                echo "version=$VERSION" >> $GITHUB_OUTPUT
+                echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+                echo "Released version $VERSION"
+
+                # Publish (create GitHub release)
+                semantic-release publish
+              else
+                echo "released=false" >> $GITHUB_OUTPUT
+                echo "Could not determine released version"
+              fi
             fi
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "semantic-release version failed"
           fi
 
   docker:
