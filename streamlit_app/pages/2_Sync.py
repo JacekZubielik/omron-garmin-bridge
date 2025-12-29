@@ -99,6 +99,31 @@ def main() -> None:
             # Global flags based on per-user settings
             sync_garmin = any(sync_garmin_users.values())
             sync_mqtt = any(sync_mqtt_users.values())
+
+            # Save Settings button
+            if st.button("Save Settings", key="save_sync_settings", icon=":material/save:"):
+                # Load current config
+                config_path = project_root / "config" / "config.yaml"
+                if config_path.exists():
+                    with open(config_path) as f:
+                        config = yaml.safe_load(f) or {}
+
+                    # Update user settings
+                    for user in config.get("users", []):
+                        slot = user.get("omron_slot")
+                        if slot in sync_garmin_users:
+                            user["garmin_enabled"] = sync_garmin_users[slot]
+                        if slot in sync_mqtt_users:
+                            user["mqtt_enabled"] = sync_mqtt_users[slot]
+
+                    # Save config
+                    with open(config_path, "w") as f:
+                        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+                    st.success("Settings saved!")
+                else:
+                    st.error("Config file not found")
+
         else:
             # Fallback if no users configured
             st.warning("No users configured. Configure in Settings first.")
