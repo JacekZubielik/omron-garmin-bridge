@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+<!-- version list -->
+
+## Unreleased
+
+### Bug Fixes
+
+- **docker**: Add README.md to Dockerfile for pdm install
+  ([`a0253ac`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/a0253aca0837dd1494d58de341f22ae5b1e0c5e4))
+
+
+## v0.1.1 (2025-12-29)
+
+### Bug Fixes
+
+- **ci**: Add allow_zero_version=true for semantic-release
+  ([`69683c4`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/69683c45b15e651a7e5864d6433ebc6f251bea60))
+
+- **docs**: Test semantic-release v0.1.1
+  ([`3db9a7b`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/3db9a7bc734c7e19b7225b5273d918161fcc9087))
+
+
 ## [0.1.0] - 2025-12-28
 
 First beta release with full core functionality.

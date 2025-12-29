@@ -49,13 +49,12 @@ major_on_zero = false
 allow_zero_version = true
 
 [tool.semantic_release.changelog]
+changelog_file = "CHANGELOG.md"
+mode = "update"
 exclude_commit_patterns = [
     "^chore\\(release\\):",
     "^Merge",
 ]
-
-[tool.semantic_release.changelog.default_templates]
-changelog_file = "CHANGELOG.md"
 
 [tool.semantic_release.branches.main]
 match = "main"
