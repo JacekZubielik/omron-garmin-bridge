@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.1.7 (2025-12-29)
+
+### Bug Fixes
+
+- Add per-user Garmin/MQTT toggle persistence in UI
+  ([#4](https://github.com/JacekZubielik/omron-garmin-bridge/pull/4),
+  [`f21e26d`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/f21e26d8a81e747b22f4eb3d4095b01c57a37d5a))
+
+
 ## v0.1.6 (2025-12-29)
 
 ### Bug Fixes
