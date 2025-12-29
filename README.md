@@ -97,7 +97,7 @@ The UI displays version and environment badge (dev/prod/local) in the sidebar fo
 | ------------- | --------------------------------------------------------------- |
 | **Dashboard** | Last reading, average BP metrics, user filter (All/User1/User2) |
 | **History**   | BP/pulse charts, filterable table, CSV export                   |
-| **Sync**      | Manual sync with step-by-step instructions                      |
+| **Sync**      | Manual sync, per-user Garmin/MQTT options, save settings        |
 | **Settings**  | Configuration, Bluetooth pairing, Garmin tokens, MQTT status    |
 
 ### Settings Page Features
@@ -117,9 +117,11 @@ The Web UI uses [Font Awesome 6](https://fontawesome.com/) icons for a clean, co
 The Sync page guides you through the synchronization process:
 
 1. Press **BT button** on OMRON device (Bluetooth icon blinks)
-2. Check the confirmation box
-3. Click **Start Sync** within 30 seconds
-4. View results and logs
+2. Configure per-user sync options (Garmin/MQTT enable/disable)
+3. Optionally click **Save Settings** to persist options to config
+4. Check the confirmation box
+5. Click **Start Sync** within 30 seconds
+6. View results and logs
 
 **Important:** OMRON stays in Bluetooth mode for only ~30 seconds after pressing the BT button.
 
@@ -179,9 +181,13 @@ users:
   - name: "User1"
     omron_slot: 1 # Slot in OMRON device (1 or 2)
     garmin_email: "user1@example.com"
+    garmin_enabled: true # Enable/disable Garmin upload
+    mqtt_enabled: true # Enable/disable MQTT publish
   - name: "User2"
     omron_slot: 2
     garmin_email: "user2@example.com"
+    garmin_enabled: true
+    mqtt_enabled: true
 
 garmin:
   tokens_path: "./data/tokens" # OAuth tokens stored per user
