@@ -40,7 +40,6 @@ build-backend = "pdm.backend"
 # ============================================================================
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
-version_source = "tag"
 branch = "main"
 commit_message = "chore(release): {version} [skip ci]"
 build_command = ""
