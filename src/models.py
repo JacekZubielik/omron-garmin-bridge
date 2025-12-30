@@ -29,16 +29,15 @@ class BloodPressureReading:
         """Blood pressure category according to WHO/ESC classification."""
         if self.systolic < 120 and self.diastolic < 80:
             return "optimal"
-        elif self.systolic < 130 and self.diastolic < 85:
+        if self.systolic < 130 and self.diastolic < 85:
             return "normal"
-        elif self.systolic < 140 and self.diastolic < 90:
+        if self.systolic < 140 and self.diastolic < 90:
             return "high_normal"
-        elif self.systolic < 160 and self.diastolic < 100:
+        if self.systolic < 160 and self.diastolic < 100:
             return "grade1_hypertension"
-        elif self.systolic < 180 and self.diastolic < 110:
+        if self.systolic < 180 and self.diastolic < 110:
             return "grade2_hypertension"
-        else:
-            return "grade3_hypertension"
+        return "grade3_hypertension"
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
