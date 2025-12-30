@@ -46,8 +46,9 @@ def main() -> None:
         )
         user_slot = st.selectbox(
             "User Slot",
-            options=[None, 1, 2],
+            options=[1, 2, None],
             format_func=lambda x: "All users" if x is None else f"User {x}",
+            index=0,  # Default to User 1
         )
         limit = st.number_input("Max records", min_value=10, max_value=1000, value=100)
         st.markdown("---")
@@ -132,32 +133,59 @@ def main() -> None:
     st.markdown("---")
     st.subheader("Blood Pressure Trend")
 
-    # Prepare data for chart
-    dates = df["timestamp"].tolist()
-    systolic = df["systolic"].tolist()
-    diastolic = df["diastolic"].tolist()
+    # Prepare data for chart - reshape for area chart
+    df_chart = df.copy()
+    df_chart["User"] = df_chart["user_slot"].apply(lambda x: f"User {x}")
 
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=dates,
-            y=systolic,
-            mode="lines+markers",
-            name="Systolic",
-            line={"color": "#dc3545", "width": 2},
-            marker={"size": 6},
+    if user_slot is None:
+        # All users - show lines with both users
+        # Melt dataframe for systolic/diastolic split
+        df_sys = df_chart[["timestamp", "systolic", "User"]].copy()
+        df_sys["Metric"] = "Systolic"
+        df_sys = df_sys.rename(columns={"systolic": "Value"})
+
+        df_dia = df_chart[["timestamp", "diastolic", "User"]].copy()
+        df_dia["Metric"] = "Diastolic"
+        df_dia = df_dia.rename(columns={"diastolic": "Value"})
+
+        df_melted = pd.concat([df_sys, df_dia])
+        df_melted["Label"] = df_melted["User"] + " - " + df_melted["Metric"]
+
+        fig = px.line(
+            df_melted.sort_values("timestamp"),
+            x="timestamp",
+            y="Value",
+            color="Label",
+            line_group="Label",
+            color_discrete_map={
+                "User 1 - Systolic": "#dc3545",
+                "User 1 - Diastolic": "#3498db",
+                "User 2 - Systolic": "#e74c3c",
+                "User 2 - Diastolic": "#2980b9",
+            },
+            markers=True,
         )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=dates,
-            y=diastolic,
-            mode="lines+markers",
-            name="Diastolic",
-            line={"color": "#3498db", "width": 2},
-            marker={"size": 6},
+    else:
+        # Single user - show systolic and diastolic lines
+        df_melted = df_chart.melt(
+            id_vars=["timestamp"],
+            value_vars=["systolic", "diastolic"],
+            var_name="Metric",
+            value_name="Value",
         )
-    )
+        df_melted["Metric"] = df_melted["Metric"].str.title()
+
+        fig = px.line(
+            df_melted.sort_values("timestamp"),
+            x="timestamp",
+            y="Value",
+            color="Metric",
+            color_discrete_map={
+                "Systolic": "#dc3545",
+                "Diastolic": "#3498db",
+            },
+            markers=True,
+        )
 
     # Add reference lines
     fig.add_hline(y=140, line_dash="dash", line_color="orange", annotation_text="High SYS")
@@ -177,20 +205,28 @@ def main() -> None:
 
     # Pulse Chart
     st.subheader("Heart Rate Trend")
-    pulse = df["pulse"].tolist()
 
-    fig_pulse = go.Figure()
-    fig_pulse.add_trace(
-        go.Scatter(
-            x=dates,
-            y=pulse,
-            mode="lines+markers",
-            name="Pulse",
-            line={"color": "#9b59b6", "width": 2},
-            fill="tozeroy",
-            fillcolor="rgba(155, 89, 182, 0.1)",
+    if user_slot is None:
+        # All users - show both users
+        fig_pulse = px.area(
+            df_chart.sort_values("timestamp"),
+            x="timestamp",
+            y="pulse",
+            color="User",
+            color_discrete_map={
+                "User 1": "#9b59b6",
+                "User 2": "#8e44ad",
+            },
         )
-    )
+    else:
+        # Single user - area chart
+        df_pulse = df_chart.sort_values("timestamp")
+        fig_pulse = px.area(
+            df_pulse,
+            x="timestamp",
+            y="pulse",
+            color_discrete_sequence=["#9b59b6"],
+        )
 
     fig_pulse.add_hline(y=100, line_dash="dash", line_color="orange", annotation_text="High")
     fig_pulse.add_hline(y=60, line_dash="dash", line_color="blue", annotation_text="Low")
@@ -199,6 +235,7 @@ def main() -> None:
         xaxis_title="Date",
         yaxis_title="BPM",
         hovermode="x unified",
+        legend={"yanchor": "top", "y": 0.99, "xanchor": "left", "x": 0.01},
         margin={"t": 20},
     )
 
@@ -216,10 +253,63 @@ def main() -> None:
             categories[cat] = categories.get(cat, 0) + 1
 
         if categories:
-            fig_cat = px.pie(
-                values=list(categories.values()),
-                names=[c.replace("_", " ").title() for c in categories],
-                color_discrete_sequence=px.colors.qualitative.Set2,
+            # Color map based on BP category severity (key = raw category name from DB)
+            category_colors = {
+                "optimal": "#28a745",  # zielony
+                "normal": "#5cb85c",  # jasnozielony
+                "high_normal": "#8bc34a",  # ciepły zielony
+                "grade1_hypertension": "#b39ddb",  # delikatny fioletowy
+                "grade2_hypertension": "#dc3545",  # czerwony
+                "grade3_hypertension": "#6a1b3d",  # ciężki krwisty fiolet
+                "unknown": "#6c757d",
+            }
+
+            # Define order (worst at top, best at bottom)
+            category_order = [
+                "grade3_hypertension",
+                "grade2_hypertension",
+                "grade1_hypertension",
+                "high_normal",
+                "normal",
+                "optimal",
+                "unknown",
+            ]
+
+            # Sort categories by defined order
+            sorted_cats = []
+            for cat in category_order:
+                if cat in categories:
+                    sorted_cats.append((cat, categories[cat]))
+
+            # Add any categories not in order
+            for raw_cat, count in categories.items():
+                if raw_cat not in [c[0] for c in sorted_cats]:
+                    sorted_cats.append((raw_cat, count))
+
+            cat_names = [c[0].replace("_", " ").title() for c in sorted_cats]
+            cat_values = [c[1] for c in sorted_cats]
+            colors = [category_colors.get(c[0], "#6c757d") for c in sorted_cats]
+
+            fig_cat = go.Figure()
+            fig_cat.add_trace(
+                go.Bar(
+                    x=cat_values,
+                    y=cat_names,
+                    orientation="h",
+                    marker_color=colors,
+                    text=cat_values,
+                    textposition="inside",
+                    insidetextanchor="middle",
+                    texttemplate="<b>%{text}</b>",
+                    textfont_size=24,
+                )
+            )
+            fig_cat.update_layout(
+                xaxis_title="Count",
+                yaxis_title="",
+                margin={"t": 20, "l": 10},
+                showlegend=False,
+                yaxis={"tickfont": {"size": 14}},
             )
             st.plotly_chart(fig_cat, width="stretch")
 
