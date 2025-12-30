@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.1.8 (2025-12-30)
+
+### Bug Fixes
+
+- **ui**: Replace deprecated use_container_width with width parameter
+  ([#5](https://github.com/JacekZubielik/omron-garmin-bridge/pull/5),
+  [`63b4165`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/63b41659ee5ae3724cf147fa4398dc79406d7d04))
+
+### Refactoring
+
+- **ui**: Improve history page charts and default user selection
+  ([#5](https://github.com/JacekZubielik/omron-garmin-bridge/pull/5),
+  [`63b4165`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/63b41659ee5ae3724cf147fa4398dc79406d7d04))
+
+
 ## v0.1.7 (2025-12-29)
 
 ### Bug Fixes
