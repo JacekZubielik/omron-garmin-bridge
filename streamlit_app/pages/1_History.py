@@ -201,7 +201,7 @@ def main() -> None:
         margin={"t": 20},
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # Pulse Chart
     st.subheader("Heart Rate Trend")
@@ -239,7 +239,7 @@ def main() -> None:
         margin={"t": 20},
     )
 
-    st.plotly_chart(fig_pulse, use_container_width=True)
+    st.plotly_chart(fig_pulse, width="stretch")
 
     # Category distribution
     st.markdown("---")
@@ -311,7 +311,7 @@ def main() -> None:
                 showlegend=False,
                 yaxis={"tickfont": {"size": 14}},
             )
-            st.plotly_chart(fig_cat, use_container_width=True)
+            st.plotly_chart(fig_cat, width="stretch")
 
     with col2:
         st.subheader("Flags Detected")
