@@ -53,9 +53,10 @@ def main() -> None:
         # User slot filter
         user_slot = st.selectbox(
             "User",
-            options=[None, 1, 2],
+            options=[1, 2, None],
             format_func=lambda x: "All Users" if x is None else f"User {x}",
             key="dashboard_user_slot",
+            index=0,  # Default to User 1
         )
 
         st.markdown("---")
