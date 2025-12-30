@@ -131,12 +131,11 @@ class OmronGarminBridge:
         )
 
         if self.mqtt.connect():
-            logger.info(f"Connected to MQTT broker at {self.mqtt.host}:{self.mqtt.port}")
+            logger.info("Connected to MQTT broker at %s:%s", self.mqtt.host, self.mqtt.port)
             self.mqtt.publish_status("online", "Bridge started")
             return True
-        else:
-            logger.error("Failed to connect to MQTT broker")
-            return False
+        logger.error("Failed to connect to MQTT broker")
+        return False
 
     async def read_from_device(self) -> list[BloodPressureReading]:
         """Read blood pressure records from OMRON device.
@@ -386,7 +385,7 @@ def load_config(config_path: str | None = None) -> dict:
     config = DEFAULT_CONFIG.copy()
 
     if config_path and Path(config_path).exists():
-        with open(config_path) as f:
+        with open(config_path, encoding="utf-8") as f:
             user_config = yaml.safe_load(f)
             if user_config and isinstance(user_config, dict):
                 # Deep merge user config into defaults
