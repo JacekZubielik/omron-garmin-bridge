@@ -91,6 +91,37 @@ def main() -> None:
         if stats["last_record"]:
             st.caption(f"To: {stats['last_record'][:10]}")
 
+        # Pending Sync Status
+        st.markdown("---")
+        st.subheader("Pending Sync")
+
+        pending_garmin = db.get_pending_garmin()
+        pending_mqtt = db.get_pending_mqtt()
+
+        col_pg, col_pm = st.columns(2)
+        with col_pg:
+            if pending_garmin:
+                st.markdown(
+                    f"<span style='color: #ffc107;'>{ICONS['warning']} Garmin: {len(pending_garmin)}</span>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"<span style='color: #28a745;'>{ICONS['check']} Garmin: 0</span>",
+                    unsafe_allow_html=True,
+                )
+        with col_pm:
+            if pending_mqtt:
+                st.markdown(
+                    f"<span style='color: #ffc107;'>{ICONS['warning']} MQTT: {len(pending_mqtt)}</span>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"<span style='color: #28a745;'>{ICONS['check']} MQTT: 0</span>",
+                    unsafe_allow_html=True,
+                )
+
         st.markdown("---")
         show_version_footer()
 

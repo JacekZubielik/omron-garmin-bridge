@@ -97,8 +97,11 @@ class OmronGarminBridge:
         self.garmin: GarminUploader | None = None
         self.mqtt: MQTTPublisher | None = None
 
-    def _init_garmin(self) -> bool:
+    def _init_garmin(self, email: str | None = None) -> bool:
         """Initialize Garmin uploader.
+
+        Args:
+            email: Garmin account email. If None, uses first enabled user from config.
 
         Returns:
             True if initialization successful
@@ -107,12 +110,24 @@ class OmronGarminBridge:
         tokens_path = garmin_config.get("tokens_path", "./data/tokens")
         self.garmin = GarminUploader(tokens_path=tokens_path)
 
+        # If no email provided, find first user with garmin_enabled
+        if not email:
+            users = self.config.get("users", [])
+            for user in users:
+                if user.get("garmin_enabled", False) and user.get("garmin_email"):
+                    email = user["garmin_email"]
+                    break
+
+        if not email:
+            logger.error("No Garmin email configured for any user")
+            return False
+
         try:
-            self.garmin.login()
-            logger.info("Garmin login successful")
+            self.garmin.login(email=email)
+            logger.info("Garmin login successful for %s", email)
             return True
         except Exception as e:
-            logger.error(f"Garmin login failed: {e}")
+            logger.error("Garmin login failed: %s", e)
             return False
 
     def _init_mqtt(self) -> bool:
@@ -131,12 +146,11 @@ class OmronGarminBridge:
         )
 
         if self.mqtt.connect():
-            logger.info(f"Connected to MQTT broker at {self.mqtt.host}:{self.mqtt.port}")
+            logger.info("Connected to MQTT broker at %s:%s", self.mqtt.host, self.mqtt.port)
             self.mqtt.publish_status("online", "Bridge started")
             return True
-        else:
-            logger.error("Failed to connect to MQTT broker")
-            return False
+        logger.error("Failed to connect to MQTT broker")
+        return False
 
     async def read_from_device(self) -> list[BloodPressureReading]:
         """Read blood pressure records from OMRON device.
@@ -364,6 +378,111 @@ class OmronGarminBridge:
 
         logger.info("Daemon stopped")
 
+    def retry_pending_garmin(self) -> tuple[int, int, int]:
+        """Retry uploading pending records to Garmin.
+
+        Returns:
+            Tuple of (uploaded, skipped, failed)
+        """
+        if not self.garmin or not self.garmin.is_logged_in:
+            logger.warning("Garmin not initialized, cannot retry")
+            return (0, 0, 0)
+
+        pending = self.dup_filter.get_pending_garmin()
+        if not pending:
+            logger.info("No pending Garmin uploads")
+            return (0, 0, 0)
+
+        logger.info("Retrying %d pending Garmin uploads", len(pending))
+
+        # Convert dicts to BloodPressureReading objects
+        records = []
+        for p in pending:
+            records.append(
+                BloodPressureReading(
+                    timestamp=datetime.fromisoformat(p["timestamp"]),
+                    systolic=p["systolic"],
+                    diastolic=p["diastolic"],
+                    pulse=p["pulse"],
+                    irregular_heartbeat=bool(p.get("irregular_heartbeat")),
+                    body_movement=bool(p.get("body_movement")),
+                    user_slot=p.get("user_slot", 1),
+                )
+            )
+
+        # Upload to Garmin
+        uploaded, skipped = self.garmin.upload_readings(records)
+        failed = len(records) - uploaded - skipped
+
+        logger.info(
+            "Garmin retry: %d uploaded, %d skipped (duplicates), %d failed",
+            uploaded,
+            skipped,
+            failed,
+        )
+
+        # Mark successfully uploaded records
+        for i, record in enumerate(records):
+            if i < uploaded + skipped:  # Uploaded or already on Garmin
+                self.dup_filter.update_upload_status(record, garmin=True)
+
+        return (uploaded, skipped, failed)
+
+    def retry_pending_mqtt(self) -> tuple[int, int]:
+        """Retry publishing pending records to MQTT.
+
+        Returns:
+            Tuple of (success, failed)
+        """
+        if not self.mqtt or not self.mqtt.is_connected:
+            logger.warning("MQTT not connected, cannot retry")
+            return (0, 0)
+
+        pending = self.dup_filter.get_pending_mqtt()
+        if not pending:
+            logger.info("No pending MQTT publishes")
+            return (0, 0)
+
+        logger.info("Retrying %d pending MQTT publishes", len(pending))
+
+        # Convert dicts to BloodPressureReading objects
+        records = []
+        for p in pending:
+            records.append(
+                BloodPressureReading(
+                    timestamp=datetime.fromisoformat(p["timestamp"]),
+                    systolic=p["systolic"],
+                    diastolic=p["diastolic"],
+                    pulse=p["pulse"],
+                    irregular_heartbeat=bool(p.get("irregular_heartbeat")),
+                    body_movement=bool(p.get("body_movement")),
+                    user_slot=p.get("user_slot", 1),
+                )
+            )
+
+        # Publish to MQTT
+        success, failure = self.mqtt.publish_readings(records)
+
+        logger.info("MQTT retry: %d success, %d failed", success, failure)
+
+        # Mark successfully published records
+        for i, record in enumerate(records):
+            if i < success:
+                self.dup_filter.update_upload_status(record, mqtt=True)
+
+        return (success, failure)
+
+    def get_pending_counts(self) -> dict[str, int]:
+        """Get count of pending uploads for each service.
+
+        Returns:
+            Dictionary with pending counts
+        """
+        return {
+            "garmin": len(self.dup_filter.get_pending_garmin()),
+            "mqtt": len(self.dup_filter.get_pending_mqtt()),
+        }
+
     def cleanup(self) -> None:
         """Clean up resources."""
         if self.mqtt:
@@ -386,7 +505,7 @@ def load_config(config_path: str | None = None) -> dict:
     config = DEFAULT_CONFIG.copy()
 
     if config_path and Path(config_path).exists():
-        with open(config_path) as f:
+        with open(config_path, encoding="utf-8") as f:
             user_config = yaml.safe_load(f)
             if user_config and isinstance(user_config, dict):
                 # Deep merge user config into defaults
