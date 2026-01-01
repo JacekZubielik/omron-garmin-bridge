@@ -14,6 +14,7 @@ import yaml
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.duplicate_filter import DuplicateFilter  # noqa: E402
 from streamlit_app.components.icons import ICONS, load_fontawesome  # noqa: E402
 from streamlit_app.components.version import show_version_footer  # noqa: E402
 
@@ -33,7 +34,41 @@ def main() -> None:
     """Sync page."""
     load_fontawesome()
 
+    # Initialize database for pending counts
+    db_path = project_root / "data" / "omron.db"
+    db = DuplicateFilter(str(db_path))
+
     with st.sidebar:
+        # Pending Sync Status
+        st.subheader("Pending Sync")
+
+        pending_garmin = db.get_pending_garmin()
+        pending_mqtt = db.get_pending_mqtt()
+
+        col_pg, col_pm = st.columns(2)
+        with col_pg:
+            if pending_garmin:
+                st.markdown(
+                    f"<span style='color: #ffc107;'>{ICONS['warning']} Garmin: {len(pending_garmin)}</span>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"<span style='color: #28a745;'>{ICONS['check']} Garmin: 0</span>",
+                    unsafe_allow_html=True,
+                )
+        with col_pm:
+            if pending_mqtt:
+                st.markdown(
+                    f"<span style='color: #ffc107;'>{ICONS['warning']} MQTT: {len(pending_mqtt)}</span>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"<span style='color: #28a745;'>{ICONS['check']} MQTT: 0</span>",
+                    unsafe_allow_html=True,
+                )
+
         st.markdown("---")
         show_version_footer()
 
@@ -132,9 +167,6 @@ def main() -> None:
             sync_garmin_users = {}
             sync_mqtt_users = {}
 
-        st.markdown("---")
-        dry_run = st.checkbox("Dry run (no changes)", value=False)
-
     st.markdown("---")
 
     # Sync instructions
@@ -205,7 +237,6 @@ def main() -> None:
                     bridge.sync(
                         garmin_enabled=sync_garmin,
                         mqtt_enabled=sync_mqtt,
-                        dry_run=dry_run,
                     )
                 )
             finally:
@@ -288,6 +319,110 @@ def main() -> None:
     with st.expander("Command Line Alternative"):
         st.markdown("Press BT button, then run:")
         st.code("pdm run python -m src.main sync", language="bash")
+
+    # Retry Failed Uploads section
+    st.markdown("---")
+    st.subheader("Retry Failed Uploads")
+
+    # Refresh pending counts (db already initialized at top)
+    pending_garmin = db.get_pending_garmin()
+    pending_mqtt = db.get_pending_mqtt()
+
+    if not pending_garmin and not pending_mqtt:
+        st.success("All records have been synced successfully!")
+    else:
+        st.info(f"**Pending:** {len(pending_garmin)} Garmin, {len(pending_mqtt)} MQTT")
+
+        # Show pending records
+        if pending_garmin:
+            with st.expander(f"Pending Garmin uploads ({len(pending_garmin)})"):
+                for r in pending_garmin[:10]:  # Show max 10
+                    ts = r["timestamp"][:16].replace("T", " ")
+                    st.text(f"{ts} | {r['systolic']}/{r['diastolic']} | {r['pulse']} bpm")
+                if len(pending_garmin) > 10:
+                    st.caption(f"... and {len(pending_garmin) - 10} more")
+
+        if pending_mqtt:
+            with st.expander(f"Pending MQTT publishes ({len(pending_mqtt)})"):
+                for r in pending_mqtt[:10]:  # Show max 10
+                    ts = r["timestamp"][:16].replace("T", " ")
+                    st.text(f"{ts} | {r['systolic']}/{r['diastolic']} | {r['pulse']} bpm")
+                if len(pending_mqtt) > 10:
+                    st.caption(f"... and {len(pending_mqtt) - 10} more")
+
+        col_retry_g, col_retry_m = st.columns(2)
+
+        with col_retry_g:
+            retry_garmin_btn = st.button(
+                f"Retry Garmin ({len(pending_garmin)})",
+                disabled=not pending_garmin,
+                type="primary" if pending_garmin else "secondary",
+                key="retry_garmin",
+                icon=":material/cloud_upload:",
+            )
+
+        with col_retry_m:
+            retry_mqtt_btn = st.button(
+                f"Retry MQTT ({len(pending_mqtt)})",
+                disabled=not pending_mqtt,
+                type="primary" if pending_mqtt else "secondary",
+                key="retry_mqtt",
+                icon=":material/wifi:",
+            )
+
+        # Handle retry Garmin
+        if retry_garmin_btn and pending_garmin:
+            with st.spinner("Retrying Garmin uploads..."):
+                try:
+                    from src.main import OmronGarminBridge, load_config
+
+                    config = load_config(str(project_root / "config" / "config.yaml"))
+                    bridge = OmronGarminBridge(config)
+
+                    if bridge._init_garmin():
+                        uploaded, skipped, failed = bridge.retry_pending_garmin()
+                        bridge.cleanup()
+
+                        if uploaded > 0 or skipped > 0:
+                            st.success(
+                                f"Garmin: {uploaded} uploaded, {skipped} skipped (duplicates)"
+                            )
+                        if failed > 0:
+                            st.warning(f"Garmin: {failed} failed")
+                        if uploaded == 0 and skipped == 0 and failed == 0:
+                            st.info("No pending records")
+
+                        st.rerun()
+                    else:
+                        st.error("Failed to connect to Garmin")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+        # Handle retry MQTT
+        if retry_mqtt_btn and pending_mqtt:
+            with st.spinner("Retrying MQTT publishes..."):
+                try:
+                    from src.main import OmronGarminBridge, load_config
+
+                    config = load_config(str(project_root / "config" / "config.yaml"))
+                    bridge = OmronGarminBridge(config)
+
+                    if bridge._init_mqtt():
+                        success, failed = bridge.retry_pending_mqtt()
+                        bridge.cleanup()
+
+                        if success > 0:
+                            st.success(f"MQTT: {success} published")
+                        if failed > 0:
+                            st.warning(f"MQTT: {failed} failed")
+                        if success == 0 and failed == 0:
+                            st.info("No pending records")
+
+                        st.rerun()
+                    else:
+                        st.error("Failed to connect to MQTT broker")
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
 
 if __name__ == "__main__":
