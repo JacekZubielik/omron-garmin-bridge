@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.2.0 (2026-01-01)
+
+### Code Style
+
+- **main**: Improve code quality with lazy logging and encoding
+  ([#6](https://github.com/JacekZubielik/omron-garmin-bridge/pull/6),
+  [`73adba5`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/73adba5ae023dc63b51415a6e14f91ad90ac7040))
+
+- **models**: Remove unnecessary elif after return statements
+  ([#6](https://github.com/JacekZubielik/omron-garmin-bridge/pull/6),
+  [`73adba5`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/73adba5ae023dc63b51415a6e14f91ad90ac7040))
+
+### Features
+
+- **ui**: Add retry pending uploads feature
+  ([#6](https://github.com/JacekZubielik/omron-garmin-bridge/pull/6),
+  [`73adba5`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/73adba5ae023dc63b51415a6e14f91ad90ac7040))
+
+### Testing
+
+- **main**: Add unit tests for configuration loading
+  ([#6](https://github.com/JacekZubielik/omron-garmin-bridge/pull/6),
+  [`73adba5`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/73adba5ae023dc63b51415a6e14f91ad90ac7040))
+
+- **models**: Add comprehensive unit tests for BloodPressureReading
+  ([#6](https://github.com/JacekZubielik/omron-garmin-bridge/pull/6),
+  [`73adba5`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/73adba5ae023dc63b51415a6e14f91ad90ac7040))
+
+- **omron_ble**: Add unit tests for BaseOmronDevice and HEM-7361T driver
+  ([#6](https://github.com/JacekZubielik/omron-garmin-bridge/pull/6),
+  [`73adba5`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/73adba5ae023dc63b51415a6e14f91ad90ac7040))
+
+
 ## v0.1.8 (2025-12-30)
 
 ### Bug Fixes
