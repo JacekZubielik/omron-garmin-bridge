@@ -8,7 +8,22 @@ Usage:
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import streamlit as st
+
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from src.main import load_config, setup_logging  # noqa: E402
+
+# Setup logging from config (once per session)
+if "logging_configured" not in st.session_state:
+    config = load_config(str(project_root / "config" / "config.yaml"))
+    setup_logging(config)
+    st.session_state.logging_configured = True
 
 # Define pages with st.Page
 dashboard = st.Page(
