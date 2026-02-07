@@ -219,29 +219,17 @@ pdm run python tools/import_tokens.py --email user1@example.com --email user2@ex
 
 ## Data Flow
 
-```
-OMRON Device (BLE)
-       |
-       v
-+------------------+
-|  OmronBLEClient  | <- Read records via Bluetooth LE
-+------------------+
-       |
-       v
-+------------------+
-| DuplicateFilter  | <- Check against local SQLite database
-|    (SQLite)      |
-+------------------+
-       |
-       +------------------------+
-       v                        v
-+------------------+    +------------------+
-|  GarminUploader  |    |  MQTTPublisher   |
-| (+ API dedup)    |    | (QoS 1, retain)  |
-+------------------+    +------------------+
-       |                        |
-       v                        v
-  Garmin Connect           MQTT Broker
+```mermaid
+flowchart TD
+    A["🩺 OMRON Device"]:::device -->|Bluetooth LE| B["OmronBLEClient"]
+    B --> C["DuplicateFilter<br/><i>SQLite</i>"]
+    C --> D["GarminUploader<br/><i>+ API dedup</i>"]
+    C --> E["MQTTPublisher<br/><i>QoS 1, retain</i>"]
+    D --> F["☁️ Garmin Connect"]:::cloud
+    E --> G["📡 MQTT Broker"]:::cloud
+
+    classDef device fill:#4a90d9,color:#fff,stroke:#2c5f8a
+    classDef cloud fill:#5cb85c,color:#fff,stroke:#3d8b3d
 ```
 
 ## MQTT Payload
