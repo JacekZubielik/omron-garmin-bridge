@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.2.2 (2026-02-07)
+
+### Bug Fixes
+
+- **logging**: Configure file logging for Streamlit UI
+  ([#8](https://github.com/JacekZubielik/omron-garmin-bridge/pull/8),
+  [`93e09a5`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/93e09a569f641ad5445469eb8ac8e19fcc908f6c))
+
+### Documentation
+
+- Replace ASCII data flow diagram with Mermaid
+  ([#8](https://github.com/JacekZubielik/omron-garmin-bridge/pull/8),
+  [`93e09a5`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/93e09a569f641ad5445469eb8ac8e19fcc908f6c))
+
+
 ## v0.2.1 (2026-02-07)
 
 ### Bug Fixes
