@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.2.1 (2026-02-07)
+
+### Bug Fixes
+
+- **ci**: Prevent GitHub Actions command injection in workflows
+  ([#7](https://github.com/JacekZubielik/omron-garmin-bridge/pull/7),
+  [`4b777a3`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/4b777a396a9f2353d8e876aed882e1f32256f2ea))
+
+
 ## v0.2.0 (2026-01-01)
 
 ### Code Style
