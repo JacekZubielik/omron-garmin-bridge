@@ -107,6 +107,18 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  label-size:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/label-size.yml
+
+  labeler:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/labeler.yml
+
+  label-sync:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/label-sync.yml
+
   build-test:
     name: Build Docker (PR validation)
     runs-on: ubuntu-latest
