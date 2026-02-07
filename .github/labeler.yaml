@@ -1,0 +1,35 @@
+---
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**/*"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: "*.md"
+  - changed-files:
+      - any-glob-to-any-file: "docs/**/*"
+
+ble:
+  - changed-files:
+      - any-glob-to-any-file: "src/omron_ble/**/*"
+
+garmin:
+  - changed-files:
+      - any-glob-to-any-file: "src/garmin_uploader.py"
+
+mqtt:
+  - changed-files:
+      - any-glob-to-any-file: "src/mqtt_publisher.py"
+
+streamlit:
+  - changed-files:
+      - any-glob-to-any-file: "streamlit_app/**/*"
+
+docker:
+  - changed-files:
+      - any-glob-to-any-file: "docker/**/*"
+  - changed-files:
+      - any-glob-to-any-file: "Dockerfile"
+
+feature:
+  - head-branch: ['^feature', 'feature']
