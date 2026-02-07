@@ -28,6 +28,10 @@
   color: "2496ED"
   description: Docker/deployment changes
 
+- name: dependencies
+  color: "0366D6"
+  description: Dependency updates
+
 # Size
 - name: size/S
   color: "dc8add"

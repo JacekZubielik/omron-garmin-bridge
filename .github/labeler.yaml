@@ -31,5 +31,11 @@ docker:
   - changed-files:
       - any-glob-to-any-file: "Dockerfile"
 
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: "pdm.lock"
+  - changed-files:
+      - any-glob-to-any-file: "pyproject.toml"
+
 feature:
   - head-branch: ['^feature', 'feature']
