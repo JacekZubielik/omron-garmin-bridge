@@ -25,9 +25,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import logging
 import signal
 import sys
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -88,6 +90,7 @@ class OmronGarminBridge:
         """
         self.config = config
         self._running = False
+        self._stop_event = asyncio.Event()
 
         # Initialize components
         self.dup_filter = DuplicateFilter(
@@ -208,16 +211,42 @@ class OmronGarminBridge:
             logger.warning("Garmin not initialized, skipping upload")
             return (0, 0, len(records))
 
-        uploaded, skipped = self.garmin.upload_readings(records)
-        failed = len(records) - uploaded - skipped
+        uploaded = 0
+        skipped = 0
+        failed = 0
+
+        # Pre-fetch existing readings for batch duplicate check
+        existing_readings: list[dict] = []
+        from datetime import timedelta
+
+        if records:
+            min_date = min(r.timestamp for r in records)
+            max_date = max(r.timestamp for r in records)
+            existing_readings = self.garmin.get_existing_readings(
+                min_date - timedelta(days=1), max_date + timedelta(days=1)
+            )
+
+        for record in records:
+            try:
+                success = self.garmin.upload_reading(
+                    record, check_duplicate=True, existing_readings=existing_readings
+                )
+                if success:
+                    uploaded += 1
+                    self.dup_filter.mark_as_uploaded(record, garmin=True, mqtt=False)
+                else:
+                    skipped += 1
+                    self.dup_filter.mark_as_uploaded(record, garmin=True, mqtt=False)
+            except Exception as e:
+                failed += 1
+                logger.error("Failed to upload record %s: %s", record, e)
+
         logger.info(
-            f"Garmin upload: {uploaded} uploaded, {skipped} skipped (duplicates), {failed} failed"
+            "Garmin upload: %d uploaded, %d skipped (duplicates), %d failed",
+            uploaded,
+            skipped,
+            failed,
         )
-
-        # Mark successfully uploaded in local database
-        for record in records[:uploaded]:
-            self.dup_filter.mark_as_uploaded(record, garmin=True, mqtt=False)
-
         return (uploaded, skipped, failed)
 
     def publish_to_mqtt(self, records: list[BloodPressureReading]) -> tuple[int, int]:
@@ -233,13 +262,17 @@ class OmronGarminBridge:
             logger.warning("MQTT not connected, skipping publish")
             return (0, len(records))
 
-        success, failure = self.mqtt.publish_readings(records)
-        logger.info(f"MQTT publish: {success} success, {failure} failed")
+        success = 0
+        failure = 0
 
-        # Mark successfully published in local database
-        for record in records[:success]:
-            self.dup_filter.mark_as_uploaded(record, garmin=False, mqtt=True)
+        for record in records:
+            if self.mqtt.publish_reading(record):
+                success += 1
+                self.dup_filter.mark_as_uploaded(record, garmin=False, mqtt=True)
+            else:
+                failure += 1
 
+        logger.info("MQTT publish: %d success, %d failed", success, failure)
         return (success, failure)
 
     async def sync(
@@ -349,6 +382,7 @@ class OmronGarminBridge:
         def handle_signal(_signum, _frame):
             logger.info("Shutdown signal received")
             self._running = False
+            self._stop_event.set()
 
         signal.signal(signal.SIGINT, handle_signal)
         signal.signal(signal.SIGTERM, handle_signal)
@@ -370,11 +404,9 @@ class OmronGarminBridge:
                     self.mqtt.publish_status("error", str(e))
 
             if self._running:
-                logger.info(f"Sleeping for {interval_minutes} minutes...")
-                for _ in range(interval_minutes * 60):
-                    if not self._running:
-                        break
-                    await asyncio.sleep(1)
+                logger.info("Sleeping for %d minutes...", interval_minutes)
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(self._stop_event.wait(), timeout=interval_minutes * 60)
 
         logger.info("Daemon stopped")
 
@@ -502,7 +534,7 @@ def load_config(config_path: str | None = None) -> dict:
     Returns:
         Configuration dictionary
     """
-    config = DEFAULT_CONFIG.copy()
+    config = deepcopy(DEFAULT_CONFIG)
 
     if config_path and Path(config_path).exists():
         with open(config_path, encoding="utf-8") as f:

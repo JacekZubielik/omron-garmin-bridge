@@ -86,27 +86,31 @@ class TestBloodPressureCategory:
     @pytest.mark.parametrize(
         "systolic,diastolic,expected_category",
         [
-            # Optimal: < 120 and < 80
+            # Optimal: sys < 120, dia < 80
             (110, 70, "optimal"),
             (119, 79, "optimal"),
             (100, 60, "optimal"),
-            # Normal: < 130 and < 85 (but not optimal)
+            # Normal: sys < 130, dia < 85 (higher of sys/dia category)
             (120, 80, "normal"),
             (125, 82, "normal"),
             (129, 84, "normal"),
-            # High Normal: < 140 and < 90 (but not normal)
+            # High Normal: sys < 140, dia < 90
             (130, 85, "high_normal"),
             (135, 87, "high_normal"),
             (139, 89, "high_normal"),
-            # Grade 1 Hypertension: < 160 and < 100
+            # Grade 1: sys < 160, dia < 100 (classified by higher category)
             (140, 90, "grade1_hypertension"),
             (150, 95, "grade1_hypertension"),
             (159, 99, "grade1_hypertension"),
-            # Grade 2 Hypertension: < 180 and < 110
+            # Mixed: sys in grade1, dia normal → grade1 (higher wins)
+            (150, 70, "grade1_hypertension"),
+            # Mixed: sys normal, dia in grade1 → grade1 (higher wins)
+            (115, 95, "grade1_hypertension"),
+            # Grade 2: sys < 180, dia < 110
             (160, 100, "grade2_hypertension"),
             (170, 105, "grade2_hypertension"),
             (179, 109, "grade2_hypertension"),
-            # Grade 3 Hypertension: >= 180 or >= 110
+            # Grade 3: sys >= 180 or dia >= 110
             (180, 110, "grade3_hypertension"),
             (200, 120, "grade3_hypertension"),
             (220, 130, "grade3_hypertension"),

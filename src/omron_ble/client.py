@@ -51,6 +51,7 @@ class OmronBLEClient:
         self._client: BleakClient | None = None
         self._protocol: OmronBLEProtocol | None = None
         self._device_driver: BaseOmronDevice | None = None
+        self._pairing_mode = False
 
         if self.device_model not in SUPPORTED_DEVICES:
             supported = ", ".join(SUPPORTED_DEVICES.keys())
