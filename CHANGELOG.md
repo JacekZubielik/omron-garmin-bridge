@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.2.4 (2026-03-22)
+
+### Bug Fixes
+
+- **ci**: Add permissions for label-size workflow
+  ([#14](https://github.com/JacekZubielik/omron-garmin-bridge/pull/14),
+  [`5f17596`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/5f17596e28e7c40b619bd0b01bd4dcab466c39ca))
+
+- **ci**: Remove reusable workflow calls causing startup_failure
+  ([#14](https://github.com/JacekZubielik/omron-garmin-bridge/pull/14),
+  [`5f17596`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/5f17596e28e7c40b619bd0b01bd4dcab466c39ca))
+
+- **ci**: Remove reusable workflow calls from CI causing startup_failure
+  ([#14](https://github.com/JacekZubielik/omron-garmin-bridge/pull/14),
+  [`5f17596`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/5f17596e28e7c40b619bd0b01bd4dcab466c39ca))
+
+
 ## v0.2.3 (2026-03-22)
 
 ### Bug Fixes
