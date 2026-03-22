@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.2.3 (2026-03-22)
+
+### Bug Fixes
+
+- Critical bug fixes for data integrity, BLE safety, and BP classification
+  ([#13](https://github.com/JacekZubielik/omron-garmin-bridge/pull/13),
+  [`787298f`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/787298fea164b4694d055a7b20142fe453ffcfa8))
+
+### Continuous Integration
+
+- Add PR labeling infrastructure
+  ([#10](https://github.com/JacekZubielik/omron-garmin-bridge/pull/10),
+  [`54d50a1`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/54d50a103b6961a8f82d478bd3ced0c6f322e4c9))
+
+- Bump GitHub Actions versions and add dependencies label
+  ([#11](https://github.com/JacekZubielik/omron-garmin-bridge/pull/11),
+  [`25bb12a`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/25bb12a3c0c6437805f8a0666d930cc25bcfff2b))
+
+
 ## v0.2.2 (2026-02-07)
 
 ### Bug Fixes
