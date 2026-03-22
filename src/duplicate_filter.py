@@ -8,7 +8,7 @@ only new records depending on the mode.
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from src.models import BloodPressureReading
@@ -36,6 +36,7 @@ class DuplicateFilter:
     def _init_db(self) -> None:
         """Initialize database schema."""
         with sqlite3.connect(self.db_path) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS uploaded_records (
@@ -356,9 +357,8 @@ class DuplicateFilter:
         Returns:
             Number of deleted records
         """
-        cutoff_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        cutoff_date = cutoff_date.replace(
-            day=cutoff_date.day - days if cutoff_date.day > days else 1
+        cutoff_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
+            days=days
         )
 
         with sqlite3.connect(self.db_path) as conn:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Any
 
@@ -139,8 +140,6 @@ class MQTTPublisher:
             self._client.loop_start()
 
             # Wait for connection with timeout
-            import time
-
             start = time.time()
             while not self._connected and (time.time() - start) < timeout:
                 time.sleep(0.1)

@@ -264,18 +264,12 @@ class GarminUploader:
                 continue
 
             try:
-                # Handle various timestamp formats
                 garmin_ts_str = garmin_ts_str.replace("Z", "+00:00")
-                if "." in garmin_ts_str:
-                    # Remove fractional seconds for parsing
-                    base, frac = garmin_ts_str.split(".")
-                    # Parse base regardless of timezone presence in frac
-                    garmin_ts = datetime.fromisoformat(base)
-                    del frac  # Unused after split
-                else:
-                    garmin_ts = datetime.fromisoformat(garmin_ts_str)
+                garmin_ts = datetime.fromisoformat(garmin_ts_str)
+                # Strip timezone for comparison with naive timestamps
+                garmin_ts = garmin_ts.replace(tzinfo=None)
             except (ValueError, TypeError) as e:
-                logger.debug(f"Failed to parse Garmin timestamp '{garmin_ts_str}': {e}")
+                logger.debug("Failed to parse Garmin timestamp '%s': %s", garmin_ts_str, e)
                 continue
 
             # Check if timestamps are within 1 minute

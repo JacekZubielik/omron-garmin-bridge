@@ -119,9 +119,13 @@ class OmronBLEProtocol:
         for byte in combined_rx:
             xor_crc ^= byte
         if xor_crc:
-            raise ValueError(
-                f"Data corruption in RX - CRC: {xor_crc}, buffer: {bytes_to_hex(combined_rx)}"
+            logger.warning(
+                "Data corruption in RX - CRC: %d, buffer: %s",
+                xor_crc,
+                bytes_to_hex(combined_rx),
             )
+            self._rx_channel_buffer = [None] * 4
+            return
 
         # Extract packet information
         self._rx_packet_type = combined_rx[1:3]
@@ -401,8 +405,15 @@ class OmronBLEProtocol:
         self._rx_finished = False
         await self.client.write_gatt_char(self.DEVICE_UNLOCK_UUID, b"\x01" + key, response=True)
 
-        while not self._rx_finished:
+        timeout_s = 10.0
+        elapsed = 0.0
+        while not self._rx_finished and elapsed < timeout_s:
             await asyncio.sleep(0.1)
+            elapsed += 0.1
+
+        if not self._rx_finished:
+            await self.client.stop_notify(self.DEVICE_UNLOCK_UUID)
+            raise TimeoutError("Unlock timed out after 10 seconds")
 
         if self._rx_data_bytes is None or self._rx_data_bytes[:2] != bytearray.fromhex("8100"):
             raise ValueError("Pairing key does not match stored key")
