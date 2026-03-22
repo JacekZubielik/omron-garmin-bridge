@@ -11,6 +11,9 @@ jobs:
   label-size:
     name: Label Size
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - name: Size label
         uses: pascalgn/size-label-action@v0.5.5
