@@ -62,7 +62,7 @@ class DuplicateFilter:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON uploaded_records(timestamp)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_user_slot ON uploaded_records(user_slot)")
             conn.commit()
-            logger.debug(f"Database initialized at {self.db_path}")
+            logger.debug("Database initialized at %s", self.db_path)
 
     def is_duplicate(self, record: BloodPressureReading) -> bool:
         """Check if a record has already been processed.
@@ -92,19 +92,34 @@ class DuplicateFilter:
         if not records:
             return []
 
-        new_records = []
+        # Collect all hashes and query in a single batch
+        hash_to_records: dict[str, BloodPressureReading] = {}
+        for record in records:
+            hash_to_records[record.record_hash] = record
+
+        all_hashes = list(hash_to_records.keys())
+        existing_hashes: set[str] = set()
+
         with sqlite3.connect(self.db_path) as conn:
-            for record in records:
+            # Query in batches of 999 (SQLite variable limit)
+            batch_size = 999
+            for i in range(0, len(all_hashes), batch_size):
+                batch = all_hashes[i : i + batch_size]
+                placeholders = ",".join("?" * len(batch))
                 cursor = conn.execute(
-                    "SELECT 1 FROM uploaded_records WHERE record_hash = ?",
-                    (record.record_hash,),
+                    f"SELECT record_hash FROM uploaded_records WHERE record_hash IN ({placeholders})",  # nosec B608
+                    batch,
                 )
-                if cursor.fetchone() is None:
-                    new_records.append(record)
+                existing_hashes.update(row[0] for row in cursor.fetchall())
+
+        # Preserve original order
+        new_records = [r for r in records if r.record_hash not in existing_hashes]
 
         logger.info(
-            f"Filtered {len(records)} records: {len(new_records)} new, "
-            f"{len(records) - len(new_records)} duplicates"
+            "Filtered %d records: %d new, %d duplicates",
+            len(records),
+            len(new_records),
+            len(records) - len(new_records),
         )
         return new_records
 
@@ -149,7 +164,7 @@ class DuplicateFilter:
                 ),
             )
             conn.commit()
-            logger.debug(f"Marked record as uploaded: {record.record_hash}")
+            logger.debug("Marked record as uploaded: %s", record.record_hash)
 
     def update_upload_status(
         self,
@@ -370,7 +385,7 @@ class DuplicateFilter:
             conn.commit()
 
         if deleted > 0:
-            logger.info(f"Deleted {deleted} records older than {days} days")
+            logger.info("Deleted %d records older than %d days", deleted, days)
 
         return deleted
 
@@ -385,5 +400,5 @@ class DuplicateFilter:
             deleted = cursor.rowcount
             conn.commit()
 
-        logger.warning(f"Cleared all {deleted} records from database")
+        logger.warning("Cleared all %d records from database", deleted)
         return deleted

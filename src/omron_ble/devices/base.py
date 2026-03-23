@@ -140,11 +140,14 @@ class BaseOmronDevice(ABC):
                     user_records.append(reading)
                 except Exception as e:
                     logger.warning(
-                        f"Error parsing record for user{user_idx + 1} at offset {offset}: {e}"
+                        "Error parsing record for user%d at offset %d: %s",
+                        user_idx + 1,
+                        offset,
+                        e,
                     )
 
             all_user_records.append(user_records)
-            logger.info(f"User {user_idx + 1}: {len(user_records)} records")
+            logger.info("User %d: %d records", user_idx + 1, len(user_records))
 
         # Update device settings if needed
         if use_unread_counter:
@@ -215,7 +218,7 @@ class BaseOmronDevice(ABC):
                 info_bytes[2 * user_idx + 4 : 2 * user_idx + 6], 8, 15
             )
 
-            logger.info(f"User {user_idx + 1}: slot={last_slot}, unread={unread_count}")
+            logger.info("User %d: slot=%d, unread=%d", user_idx + 1, last_slot, unread_count)
 
             commands = self._calc_ring_buffer_read(user_idx, unread_count, last_slot)
             all_commands.append(commands)
@@ -292,4 +295,4 @@ class BaseOmronDevice(ABC):
             time_bytes,
             block_size=len(time_bytes),
         )
-        logger.info(f"Device time synced to {datetime.now()}")
+        logger.info("Device time synced to %s", datetime.now())

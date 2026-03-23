@@ -153,17 +153,17 @@ class GarminUploader:
             self._logged_in = True
 
             display_name = self._client.display_name or "Unknown"
-            logger.info(f"Logged in to Garmin Connect as {display_name}")
+            logger.info("Logged in to Garmin Connect as %s", display_name)
             return True
 
         except GarminConnectAuthenticationError as e:
-            logger.error(f"Garmin authentication failed: {e}")
+            logger.error("Garmin authentication failed: %s", e)
             self._client = None
             self._logged_in = False
             raise
 
         except Exception as e:
-            logger.error(f"Garmin login error: {e}")
+            logger.error("Garmin login error: %s", e)
             self._client = None
             self._logged_in = False
             raise
@@ -200,7 +200,7 @@ class GarminUploader:
         start_str = start_date.strftime("%Y-%m-%d")
         end_str = (end_date or start_date).strftime("%Y-%m-%d")
 
-        logger.debug(f"Fetching Garmin BP readings from {start_str} to {end_str}")
+        logger.debug("Fetching Garmin BP readings from %s to %s", start_str, end_str)
 
         try:
             response = self._client.get_blood_pressure(start_str, end_str)
@@ -223,11 +223,11 @@ class GarminUploader:
                 measurements = summary.get("measurements", [])
                 all_readings.extend(measurements)
 
-            logger.debug(f"Found {len(all_readings)} existing readings in Garmin")
+            logger.debug("Found %d existing readings in Garmin", len(all_readings))
             return all_readings
 
         except Exception as e:
-            logger.warning(f"Failed to fetch Garmin readings: {e}")
+            logger.warning("Failed to fetch Garmin readings: %s", e)
             return []
 
     def is_duplicate_in_garmin(
@@ -288,8 +288,10 @@ class GarminUploader:
                 and garmin_pulse == reading.pulse
             ):
                 logger.debug(
-                    f"Found duplicate in Garmin: {reading.systolic}/{reading.diastolic} "
-                    f"at {reading.timestamp}"
+                    "Found duplicate in Garmin: %d/%d at %s",
+                    reading.systolic,
+                    reading.diastolic,
+                    reading.timestamp,
                 )
                 return True
 
@@ -317,7 +319,10 @@ class GarminUploader:
         # Check for duplicate in Garmin
         if check_duplicate and self.is_duplicate_in_garmin(reading, existing_readings):
             logger.info(
-                f"Skipping duplicate: {reading.systolic}/{reading.diastolic} at {reading.timestamp}"
+                "Skipping duplicate: %d/%d at %s",
+                reading.systolic,
+                reading.diastolic,
+                reading.timestamp,
             )
             return False
 
@@ -339,13 +344,16 @@ class GarminUploader:
             )
 
             logger.info(
-                f"Uploaded to Garmin: {reading.systolic}/{reading.diastolic} mmHg, "
-                f"pulse {reading.pulse} bpm @ {reading.timestamp}"
+                "Uploaded to Garmin: %d/%d mmHg, pulse %d bpm @ %s",
+                reading.systolic,
+                reading.diastolic,
+                reading.pulse,
+                reading.timestamp,
             )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to upload reading: {e}")
+            logger.error("Failed to upload reading: %s", e)
             raise
 
     def upload_readings(
@@ -386,8 +394,10 @@ class GarminUploader:
 
             existing_readings = self.get_existing_readings(start_date, end_date)
             logger.info(
-                f"Found {len(existing_readings)} existing readings in Garmin "
-                f"for date range {start_date.date()} to {end_date.date()}"
+                "Found %d existing readings in Garmin for date range %s to %s",
+                len(existing_readings),
+                start_date.date(),
+                end_date.date(),
             )
 
         # Upload each reading
@@ -403,11 +413,11 @@ class GarminUploader:
                 else:
                     skipped += 1
             except Exception as e:
-                logger.error(f"Failed to upload {reading}: {e}")
+                logger.error("Failed to upload %s: %s", reading, e)
                 # Continue with next reading
                 continue
 
-        logger.info(f"Upload complete: {uploaded} uploaded, {skipped} skipped")
+        logger.info("Upload complete: %d uploaded, %d skipped", uploaded, skipped)
         return (uploaded, skipped)
 
     def filter_new_readings(
@@ -443,8 +453,9 @@ class GarminUploader:
                 new_readings.append(reading)
 
         logger.info(
-            f"Filtered readings: {len(new_readings)} new, "
-            f"{len(readings) - len(new_readings)} already in Garmin"
+            "Filtered readings: %d new, %d already in Garmin",
+            len(new_readings),
+            len(readings) - len(new_readings),
         )
         return new_readings
 

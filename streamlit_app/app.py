@@ -13,6 +13,13 @@ from pathlib import Path
 
 import streamlit as st
 
+# Page config MUST be the first st.* call
+st.set_page_config(
+    page_title="OMRON Garmin Bridge",
+    page_icon=":material/favorite:",
+    layout="wide",
+)
+
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -25,38 +32,35 @@ if "logging_configured" not in st.session_state:
     setup_logging(config)
     st.session_state.logging_configured = True
 
-# Define pages with st.Page
+# Define pages with st.Page — url_path prevents "app" entry
 dashboard = st.Page(
     "pages/0_Dashboard.py",
     title="Dashboard",
     icon=":material/dashboard:",
     default=True,
+    url_path="dashboard",
 )
 history = st.Page(
     "pages/1_History.py",
     title="History",
     icon=":material/history:",
+    url_path="history",
 )
 sync = st.Page(
     "pages/2_Sync.py",
     title="Sync",
     icon=":material/sync:",
+    url_path="sync",
 )
 settings = st.Page(
     "pages/3_Settings.py",
     title="Settings",
     icon=":material/settings:",
+    url_path="settings",
 )
 
 # Navigation
 pg = st.navigation([dashboard, history, sync, settings])
-
-# Page config
-st.set_page_config(
-    page_title="OMRON Garmin Bridge",
-    page_icon="❤",
-    layout="wide",
-)
 
 # Run selected page
 pg.run()

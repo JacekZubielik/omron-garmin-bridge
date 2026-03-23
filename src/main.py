@@ -169,13 +169,13 @@ class OmronGarminBridge:
         client = OmronBLEClient(model, mac)
 
         try:
-            logger.info(f"Connecting to OMRON {model}...")
+            logger.info("Connecting to OMRON %s...", model)
             await client.connect()
             logger.info("Connected to device")
 
             logger.info("Reading records...")
             records = await client.read_all_records_flat(only_new=False, sync_time=sync_time)
-            logger.info(f"Read {len(records)} records from device")
+            logger.info("Read %d records from device", len(records))
 
             return records
 
@@ -195,7 +195,7 @@ class OmronGarminBridge:
         new_records = self.dup_filter.filter_new_records(records)
         duplicate_count = len(records) - len(new_records)
 
-        logger.info(f"New records: {len(new_records)}, duplicates: {duplicate_count}")
+        logger.info("New records: %d, duplicates: %d", len(new_records), duplicate_count)
         return new_records
 
     def upload_to_garmin(self, records: list[BloodPressureReading]) -> tuple[int, int, int]:
@@ -325,10 +325,15 @@ class OmronGarminBridge:
                 if r.body_movement:
                     flags.append("MOV")
                 logger.info(
-                    f"  {i}. {r.timestamp:%Y-%m-%d %H:%M} | "
-                    f"{r.systolic}/{r.diastolic} mmHg | "
-                    f"{r.pulse} bpm | User {r.user_slot} | "
-                    f"{r.category}{' [' + ', '.join(flags) + ']' if flags else ''}"
+                    "  %d. %s | %d/%d mmHg | %d bpm | User %d | %s%s",
+                    i,
+                    r.timestamp.strftime("%Y-%m-%d %H:%M"),
+                    r.systolic,
+                    r.diastolic,
+                    r.pulse,
+                    r.user_slot,
+                    r.category,
+                    " [" + ", ".join(flags) + "]" if flags else "",
                 )
 
             if dry_run:
@@ -343,7 +348,7 @@ class OmronGarminBridge:
                     summary["garmin"]["skipped"] = skipped
                     summary["garmin"]["failed"] = failed
                 except Exception as e:
-                    logger.error(f"Garmin upload error: {e}")
+                    logger.error("Garmin upload error: %s", e)
                     summary["errors"].append(f"Garmin: {e}")
 
             # Publish to MQTT
@@ -353,7 +358,7 @@ class OmronGarminBridge:
                     summary["mqtt"]["success"] = success
                     summary["mqtt"]["failed"] = failed
                 except Exception as e:
-                    logger.error(f"MQTT publish error: {e}")
+                    logger.error("MQTT publish error: %s", e)
                     summary["errors"].append(f"MQTT: {e}")
 
             # Publish sync status to MQTT
@@ -364,7 +369,7 @@ class OmronGarminBridge:
                 )
 
         except Exception as e:
-            logger.error(f"Sync error: {e}")
+            logger.error("Sync error: %s", e)
             summary["errors"].append(str(e))
 
         return summary
@@ -376,7 +381,7 @@ class OmronGarminBridge:
             interval_minutes: Minutes between sync cycles
         """
         self._running = True
-        logger.info(f"Starting daemon with {interval_minutes} minute interval")
+        logger.info("Starting daemon with %d minute interval", interval_minutes)
 
         # Handle shutdown signals
         def handle_signal(_signum, _frame):
@@ -393,13 +398,14 @@ class OmronGarminBridge:
                 summary = await self.sync()
 
                 logger.info(
-                    f"Sync complete: {summary['new_records']} new records, "
-                    f"Garmin: {summary['garmin']['uploaded']} uploaded, "
-                    f"MQTT: {summary['mqtt']['success']} published"
+                    "Sync complete: %d new records, Garmin: %d uploaded, MQTT: %d published",
+                    summary["new_records"],
+                    summary["garmin"]["uploaded"],
+                    summary["mqtt"]["success"],
                 )
 
             except Exception as e:
-                logger.error(f"Sync cycle failed: {e}")
+                logger.error("Sync cycle failed: %s", e)
                 if self.mqtt and self.mqtt.is_connected:
                     self.mqtt.publish_status("error", str(e))
 
@@ -740,7 +746,7 @@ def main() -> None:
         print("\nCancelled.")
         sys.exit(130)
     except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        logger.error("Fatal error: %s", e)
         if args.debug:
             raise
         sys.exit(1)
