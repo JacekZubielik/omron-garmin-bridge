@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- version list -->
 
+## v0.2.6 (2026-03-23)
+
+### Bug Fixes
+
+- **deps**: Bump streamlit 1.40→1.55
+  ([#23](https://github.com/JacekZubielik/omron-garmin-bridge/pull/23),
+  [`1876a7a`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/1876a7a633b122c8e70dcc75a5c3f12abecd21cc))
+
+### Chores
+
+- Configure Renovate ([#12](https://github.com/JacekZubielik/omron-garmin-bridge/pull/12),
+  [`c258465`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/c258465529e755a324031c61b00fd352530e4d67))
+
+- Pin Python to 3.12 in Renovate config
+  ([#12](https://github.com/JacekZubielik/omron-garmin-bridge/pull/12),
+  [`c258465`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/c258465529e755a324031c61b00fd352530e4d67))
+
+- **deps**: Update actions/labeler action to v6
+  ([#20](https://github.com/JacekZubielik/omron-garmin-bridge/pull/20),
+  [`aa139e8`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/aa139e8e6135e3c1ce8a48487e4b40b628d40410))
+
+- **deps**: Update docker/build-push-action action to v7
+  ([#21](https://github.com/JacekZubielik/omron-garmin-bridge/pull/21),
+  [`2b8c494`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/2b8c494b4d4e222e7af71f48a57217544a626011))
+
+- **deps**: Update pascalgn/size-label-action action to v0.5.7
+  ([#16](https://github.com/JacekZubielik/omron-garmin-bridge/pull/16),
+  [`2fe7fb4`](https://github.com/JacekZubielik/omron-garmin-bridge/commit/2fe7fb4dc672065db485070c872971aeb0632a8f))
+
+
 ## v0.2.5 (2026-03-23)
 
 ### Bug Fixes
