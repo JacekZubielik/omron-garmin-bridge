@@ -94,11 +94,11 @@ class MQTTPublisher:
         if reason_code == mqtt.CONNACK_ACCEPTED or reason_code.is_failure is False:
             self._connected = True
             self._last_error = None
-            logger.info(f"Connected to MQTT broker {self.host}:{self.port}")
+            logger.info("Connected to MQTT broker %s:%s", self.host, self.port)
         else:
             self._connected = False
             self._last_error = str(reason_code)
-            logger.error(f"MQTT connection failed: {reason_code}")
+            logger.error("MQTT connection failed: %s", reason_code)
 
     def _on_disconnect(
         self,
@@ -111,7 +111,7 @@ class MQTTPublisher:
         """Callback when disconnected from broker."""
         self._connected = False
         if reason_code != mqtt.MQTT_ERR_SUCCESS:
-            logger.warning(f"MQTT disconnected unexpectedly: {reason_code}")
+            logger.warning("MQTT disconnected unexpectedly: %s", reason_code)
         else:
             logger.info("Disconnected from MQTT broker")
 
@@ -124,7 +124,7 @@ class MQTTPublisher:
         _properties: Properties | None = None,
     ) -> None:
         """Callback when message is published."""
-        logger.debug(f"MQTT message {mid} published")
+        logger.debug("MQTT message %d published", mid)
 
     def connect(self, timeout: float = 10.0) -> bool:
         """Connect to MQTT broker.
@@ -146,14 +146,14 @@ class MQTTPublisher:
 
             if not self._connected:
                 logger.error(
-                    f"MQTT connection timeout after {timeout}s. Last error: {self._last_error}"
+                    "MQTT connection timeout after %ss. Last error: %s", timeout, self._last_error
                 )
                 return False
 
             return True
 
         except Exception as e:
-            logger.error(f"Failed to connect to MQTT broker: {e}")
+            logger.error("Failed to connect to MQTT broker: %s", e)
             self._last_error = str(e)
             return False
 
@@ -163,7 +163,7 @@ class MQTTPublisher:
             self._client.loop_stop()
             self._client.disconnect()
         except Exception as e:
-            logger.warning(f"Error during MQTT disconnect: {e}")
+            logger.warning("Error during MQTT disconnect: %s", e)
         finally:
             self._connected = False
 
@@ -256,17 +256,19 @@ class MQTTPublisher:
 
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
                 logger.info(
-                    f"Published to {topic}: "
-                    f"{reading.systolic}/{reading.diastolic} mmHg, "
-                    f"pulse {reading.pulse} bpm"
+                    "Published to %s: %d/%d mmHg, pulse %d bpm",
+                    topic,
+                    reading.systolic,
+                    reading.diastolic,
+                    reading.pulse,
                 )
                 return True
             else:
-                logger.error(f"Failed to publish: {mqtt.error_string(result.rc)}")
+                logger.error("Failed to publish: %s", mqtt.error_string(result.rc))
                 return False
 
         except Exception as e:
-            logger.error(f"MQTT publish error: {e}")
+            logger.error("MQTT publish error: %s", e)
             return False
 
     def publish_readings(
@@ -296,7 +298,7 @@ class MQTTPublisher:
             else:
                 failure += 1
 
-        logger.info(f"MQTT publish complete: {success} success, {failure} failed")
+        logger.info("MQTT publish complete: %d success, %d failed", success, failure)
         return (success, failure)
 
     def publish_status(
@@ -334,7 +336,7 @@ class MQTTPublisher:
             )
             return bool(result.rc == mqtt.MQTT_ERR_SUCCESS)
         except Exception as e:
-            logger.error(f"Failed to publish status: {e}")
+            logger.error("Failed to publish status: %s", e)
             return False
 
 

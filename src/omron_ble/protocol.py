@@ -94,7 +94,7 @@ class OmronBLEProtocol:
             channel_id = self.DEVICE_RX_CHANNEL_HANDLES.index(char_handle.handle)
 
         self._rx_channel_buffer[channel_id] = rx_bytes
-        logger.debug(f"RX ch{channel_id} < {bytes_to_hex(rx_bytes)}")
+        logger.debug("RX ch%d < %s", channel_id, bytes_to_hex(rx_bytes))
 
         # Check if we have data in first buffer
         if self._rx_channel_buffer[0] is None:
@@ -162,7 +162,7 @@ class OmronBLEProtocol:
 
             for ch_idx in required_tx_channels:
                 chunk = command_copy[:16]
-                logger.debug(f"TX ch{ch_idx} > {bytes_to_hex(chunk)}")
+                logger.debug("TX ch%d > %s", ch_idx, bytes_to_hex(chunk))
                 await self.client.write_gatt_char(self.DEVICE_TX_CHANNEL_UUIDS[ch_idx], chunk)
                 command_copy = command_copy[16:]
 
@@ -177,7 +177,7 @@ class OmronBLEProtocol:
                 break
 
             retries += 1
-            logger.warning(f"Transmission failed, retry {retries}/{max_retries}")
+            logger.warning("Transmission failed, retry %d/%d", retries, max_retries)
             if retries >= max_retries:
                 raise TimeoutError("Transmission failed after 5 retries")
 
@@ -285,7 +285,7 @@ class OmronBLEProtocol:
         data = bytearray()
         while bytes_to_read > 0:
             next_block_size = min(bytes_to_read, block_size)
-            logger.debug(f"Read from 0x{start_address:04x} size 0x{next_block_size:02x}")
+            logger.debug("Read from 0x%04x size 0x%02x", start_address, next_block_size)
             data += await self.read_eeprom_block(start_address, next_block_size)
             start_address += next_block_size
             bytes_to_read -= next_block_size
@@ -303,7 +303,7 @@ class OmronBLEProtocol:
         """
         while len(data) > 0:
             next_block_size = min(len(data), block_size)
-            logger.debug(f"Write to 0x{start_address:04x} size 0x{next_block_size:02x}")
+            logger.debug("Write to 0x%04x size 0x%02x", start_address, next_block_size)
             await self.write_eeprom_block(start_address, data[:next_block_size])
             data = data[next_block_size:]
             start_address += next_block_size
@@ -327,7 +327,7 @@ class OmronBLEProtocol:
         self._rx_data_bytes = None
 
         # Enable notifications on unlock channel
-        logger.debug(f"Starting notify on unlock UUID: {self.DEVICE_UNLOCK_UUID}")
+        logger.debug("Starting notify on unlock UUID: %s", self.DEVICE_UNLOCK_UUID)
         await self.client.start_notify(self.DEVICE_UNLOCK_UUID, self._unlock_callback)
 
         # Small delay to ensure notifications are set up
@@ -335,7 +335,7 @@ class OmronBLEProtocol:
 
         # Send command to enter key programming mode (0x02 + 16 zero bytes)
         enter_pairing_cmd = b"\x02" + b"\x00" * 16
-        logger.debug(f"Sending enter pairing mode command: {bytes_to_hex(enter_pairing_cmd)}")
+        logger.debug("Sending enter pairing mode command: %s", bytes_to_hex(enter_pairing_cmd))
         await self.client.write_gatt_char(self.DEVICE_UNLOCK_UUID, enter_pairing_cmd, response=True)
 
         # Wait for response with timeout
@@ -351,7 +351,7 @@ class OmronBLEProtocol:
                 "Is the device in pairing mode (P displayed)?"
             )
 
-        logger.debug(f"Received pairing mode response: {bytes_to_hex(self._rx_data_bytes or b'')}")
+        logger.debug("Received pairing mode response: %s", bytes_to_hex(self._rx_data_bytes or b""))
 
         rx_data = self._rx_data_bytes
         if rx_data is None:
@@ -370,7 +370,7 @@ class OmronBLEProtocol:
         # Program new key (0x00 + 16-byte key)
         self._rx_finished = False
         program_key_cmd = b"\x00" + key
-        logger.debug(f"Sending program key command: {bytes_to_hex(program_key_cmd)}")
+        logger.debug("Sending program key command: %s", bytes_to_hex(program_key_cmd))
         await self.client.write_gatt_char(self.DEVICE_UNLOCK_UUID, program_key_cmd, response=True)
 
         # Wait for response with timeout
@@ -384,7 +384,7 @@ class OmronBLEProtocol:
             raise ValueError(f"Timeout waiting for key programming response after {timeout_s}s")
 
         logger.debug(
-            f"Received key programming response: {bytes_to_hex(self._rx_data_bytes or b'')}"
+            "Received key programming response: %s", bytes_to_hex(self._rx_data_bytes or b"")
         )
 
         if self._rx_data_bytes is None or self._rx_data_bytes[:2] != bytearray.fromhex("8000"):
@@ -393,7 +393,7 @@ class OmronBLEProtocol:
             raise ValueError(f"Failed to program new key. Response: {response_hex}")
 
         await self.client.stop_notify(self.DEVICE_UNLOCK_UUID)
-        logger.info(f"Device paired successfully with key {bytes_to_hex(key)}")
+        logger.info("Device paired successfully with key %s", bytes_to_hex(key))
 
     async def unlock_with_key(self, key: bytearray = DEFAULT_PAIRING_KEY) -> None:
         """Unlock device with stored pairing key.

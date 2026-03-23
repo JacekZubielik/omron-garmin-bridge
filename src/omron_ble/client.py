@@ -69,7 +69,7 @@ class OmronBLEClient:
         Returns:
             List of discovered BLE devices
         """
-        logger.info(f"Scanning for BLE devices ({timeout}s)...")
+        logger.info("Scanning for BLE devices (%ss)...", timeout)
         devices = await BleakScanner.discover(timeout=timeout, return_adv=True)
 
         # Sort by signal strength (RSSI)
@@ -81,10 +81,10 @@ class OmronBLEClient:
 
         result = []
         for mac, (device, adv_data) in sorted_devices:
-            logger.debug(f"Found: {mac} - {device.name} (RSSI: {adv_data.rssi})")
+            logger.debug("Found: %s - %s (RSSI: %s)", mac, device.name, adv_data.rssi)
             result.append(device)
 
-        logger.info(f"Found {len(result)} devices")
+        logger.info("Found %d devices", len(result))
         return result
 
     @staticmethod
@@ -108,7 +108,7 @@ class OmronBLEClient:
                 or "HEM-" in device.name.upper()
             ):
                 omron_devices.append(device)
-                logger.info(f"OMRON device found: {device.address} - {device.name}")
+                logger.info("OMRON device found: %s - %s", device.address, device.name)
 
         return omron_devices
 
@@ -134,7 +134,7 @@ class OmronBLEClient:
             # Use first found device
             device = devices[0]
             self.mac_address = device.address
-            logger.info(f"Using device: {self.mac_address} - {device.name}")
+            logger.info("Using device: %s - %s", self.mac_address, device.name)
 
             # Create client from scanned device
             self._client = BleakClient(device)
@@ -142,7 +142,7 @@ class OmronBLEClient:
             # For bonded devices, try direct connection first without scanning
             # This avoids the "Discovering: no" problem where adapter stops scanning
             # before OMRON can respond
-            logger.info(f"Attempting direct connection to {self.mac_address}...")
+            logger.info("Attempting direct connection to %s...", self.mac_address)
 
             # Try direct connection using MAC address (works for bonded devices)
             self._client = BleakClient(self.mac_address)
@@ -153,9 +153,9 @@ class OmronBLEClient:
                 else:
                     raise ConnectionError("Connection returned but not connected")
             except (TimeoutError, ConnectionError, OSError) as direct_err:
-                logger.debug(f"Direct connection failed: {direct_err}, falling back to scan")
+                logger.debug("Direct connection failed: %s, falling back to scan", direct_err)
                 # Fall back to scanning
-                logger.info(f"Scanning for device {self.mac_address}...")
+                logger.info("Scanning for device %s...", self.mac_address)
                 device = await BleakScanner.find_device_by_address(
                     self.mac_address,
                     timeout=scan_timeout,
@@ -165,7 +165,7 @@ class OmronBLEClient:
                         f"Device {self.mac_address} not found. "
                         "Make sure Bluetooth is enabled on the device (press BT button)."
                     ) from direct_err
-                logger.info(f"Found device: {device.name}")
+                logger.info("Found device: %s", device.name)
                 self._client = BleakClient(device)
 
         self._pairing_mode = pairing_mode
@@ -173,7 +173,7 @@ class OmronBLEClient:
         try:
             # Connect if not already connected (direct connection case)
             if not self._client.is_connected:
-                logger.info(f"Connecting to {self.mac_address}...")
+                logger.info("Connecting to %s...", self.mac_address)
                 await self._client.connect()
             logger.debug("BLE connection established")
 
@@ -200,7 +200,7 @@ class OmronBLEClient:
             return True
 
         except Exception as e:
-            logger.error(f"Connection failed: {e}")
+            logger.error("Connection failed: %s", e)
             if self._client and self._client.is_connected:
                 await self._client.disconnect()
             raise
@@ -219,9 +219,9 @@ class OmronBLEClient:
                 await self._client.disconnect()
             except AssertionError as e:
                 # Known issue with bluezdbus adapter
-                logger.warning(f"Disconnect assertion error (can be ignored): {e}")
+                logger.warning("Disconnect assertion error (can be ignored): %s", e)
             except Exception as e:
-                logger.warning(f"Disconnect error: {e}")
+                logger.warning("Disconnect error: %s", e)
 
             logger.info("Disconnected")
 
@@ -261,7 +261,7 @@ class OmronBLEClient:
                     await self._client.pair(protection_level=2)
                     logger.info("OS-level pairing completed")
                 except Exception as e:
-                    logger.warning(f"OS-level pairing error: {e}")
+                    logger.warning("OS-level pairing error: %s", e)
                     # On Linux, if pair() fails, the connection often becomes unstable
                     # We need to reconnect before trying OMRON protocol
                     logger.info("Reconnecting after failed OS pairing...")
@@ -296,7 +296,7 @@ class OmronBLEClient:
             return True
 
         except Exception as e:
-            logger.error(f"Pairing failed: {e}")
+            logger.error("Pairing failed: %s", e)
             logger.error("Make sure device shows blinking 'P' (pairing mode).")
             raise
 
@@ -324,7 +324,7 @@ class OmronBLEClient:
         )
 
         total = sum(len(r) for r in records)
-        logger.info(f"Read {total} records total")
+        logger.info("Read %d records total", total)
 
         return records
 

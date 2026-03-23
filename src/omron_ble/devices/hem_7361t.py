@@ -124,5 +124,5 @@ class HEM7361T(BaseOmronDevice):
         checksum = sum(new_bytes) & 0xFF
         new_bytes += bytes([checksum, 0x00])
 
-        logger.info(f"Time sync prepared: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info("Time sync prepared: %s", current_time.strftime("%Y-%m-%d %H:%M:%S"))
         return new_bytes
