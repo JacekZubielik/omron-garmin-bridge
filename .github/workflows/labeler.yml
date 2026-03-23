@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Auto-label by file paths
-        uses: actions/labeler@v5
+        uses: actions/labeler@v6
         with:
           configuration-path: .github/labeler.yaml
           repo-token: ${{ secrets.GITHUB_TOKEN }}
